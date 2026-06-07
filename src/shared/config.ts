@@ -1,10 +1,8 @@
 /**
- * SINGLE SOURCE OF TRUTH for all tunable values.
+ * SINGLE SOURCE OF TRUTH for all tunable scalar values.
  * Nothing tunable should be hardcoded in a service — import it from here.
- * (Mirrors the reference project's config.ts discipline.)
+ * (Role schedules / population live in `roles.ts`, also shared.)
  */
-
-import { Role } from "./enums";
 
 export const CONFIG = {
 	/** Day/night clock. */
@@ -62,10 +60,3 @@ export const CONFIG = {
 		HOUSE_ROW_Z: 45,
 	},
 } as const;
-
-/**
- * Daily schedules per role, filled in over M2 (shopkeeper) and M3 (everyone else).
- * Each entry: at `hour`, the NPC should head to a node of `kind`.
- * Left as a stub for M0 — populated in ScheduleService work.
- */
-export const SCHEDULES: Partial<Record<Role, ReadonlyArray<{ hour: number; goto: string }>>> = {};

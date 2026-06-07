@@ -115,41 +115,51 @@ export namespace TownBuilder {
 		buildGround();
 		buildRoads(town);
 
+		const addNodes = (built: ReadonlyArray<TownNode>) => {
+			for (const n of built) nodes.push(n);
+		};
+
 		// South side, road-connected via driveways / the connector road. West→East:
 		//   Bank — Store — Park(centre) — School — Cafe.
-		buildShell(
-			new Vector3(-140, 0, -46),
-			46,
-			32,
-			20,
-			Color3.fromRGB(150, 150, 158),
-			Color3.fromRGB(86, 88, 96),
-			Enum.Material.Concrete,
-			12,
-			"Bank",
-			Color3.fromRGB(40, 90, 64),
-			town,
+		addNodes(
+			buildShell(
+				new Vector3(-140, 0, -46),
+				46,
+				32,
+				20,
+				Color3.fromRGB(150, 150, 158),
+				Color3.fromRGB(86, 88, 96),
+				Enum.Material.Concrete,
+				12,
+				"Bank",
+				NodeKind.Bank,
+				Color3.fromRGB(40, 90, 64),
+				town,
+			),
 		);
-		nodes.push(buildStore(new Vector3(-55, 0, -45), town));
-		nodes.push(buildSchool(new Vector3(55, 0, -45), town));
-		buildShell(
-			new Vector3(145, 0, -44),
-			36,
-			26,
-			14,
-			Color3.fromRGB(196, 152, 110),
-			Color3.fromRGB(120, 78, 66),
-			Enum.Material.WoodPlanks,
-			10,
-			"Cafe",
-			Color3.fromRGB(150, 70, 40),
-			town,
+		addNodes(buildStore(new Vector3(-55, 0, -45), town));
+		addNodes(buildSchool(new Vector3(55, 0, -45), town));
+		addNodes(
+			buildShell(
+				new Vector3(145, 0, -44),
+				36,
+				26,
+				14,
+				Color3.fromRGB(196, 152, 110),
+				Color3.fromRGB(120, 78, 66),
+				Enum.Material.WoodPlanks,
+				10,
+				"Cafe",
+				NodeKind.Cafe,
+				Color3.fromRGB(150, 70, 40),
+				town,
+			),
 		);
-		nodes.push(buildPark(town));
+		addNodes(buildPark(town));
 
 		// Houses: a row north of the road, doors facing -Z (toward the road).
 		for (let i = 0; i < CONFIG.town.HOUSE_COUNT; i++) {
-			nodes.push(buildHouse(houseCenter(i), i + 1, town));
+			addNodes(buildHouse(houseCenter(i), i + 1, town));
 		}
 
 		addRoadMarkings(town);
@@ -159,6 +169,27 @@ export namespace TownBuilder {
 		for (const node of nodes) createNodeMarker(node, nodesFolder);
 
 		return { model: town, nodes, nightLights };
+	}
+
+	/** Build a building's interior node (NPC destination / loot) + entrance node (at the door,
+	 *  on the road side) for the M4 perception/crime layer. */
+	function buildingNodes(
+		interiorName: string,
+		entranceName: string,
+		kind: NodeKind,
+		center: Vector3,
+		d: number,
+	): Array<TownNode> {
+		const facing = center.Z >= 0 ? -1 : 1; // door faces toward the road (z = 0)
+		return [
+			{ name: interiorName, kind, position: center.add(new Vector3(0, 3, 0)), spot: "interior" },
+			{
+				name: entranceName,
+				kind,
+				position: center.add(new Vector3(0, 3, facing * (d / 2 + 6))),
+				spot: "entrance",
+			},
+		];
 	}
 
 	/** Center of house `i` (0-based) in the north residential row — the one source of truth
@@ -180,9 +211,10 @@ export namespace TownBuilder {
 		wallMaterial: Enum.Material,
 		doorGap: number,
 		name: string,
+		nodeKind: NodeKind,
 		signColor: Color3 | undefined,
 		parent: Instance,
-	): void {
+	): Array<TownNode> {
 		const model = new Instance("Model");
 		model.Name = name;
 		model.Parent = parent;
@@ -258,6 +290,8 @@ export namespace TownBuilder {
 			awning: signColor !== undefined,
 			chimney: false,
 		});
+
+		return buildingNodes(`${name}Node`, `${name}Entrance`, nodeKind, center, d);
 	}
 
 	// ── pieces ────────────────────────────────────────────────────────────────
@@ -415,7 +449,7 @@ export namespace TownBuilder {
 	}
 
 	/** General Store — the first big rob target. Door faces +Z (the road). */
-	function buildStore(center: Vector3, parent: Instance): TownNode {
+	function buildStore(center: Vector3, parent: Instance): Array<TownNode> {
 		const model = new Instance("Model");
 		model.Name = "GeneralStore";
 		model.Parent = parent;
@@ -498,15 +532,11 @@ export namespace TownBuilder {
 
 		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: true, chimney: false });
 
-		return {
-			name: "StoreNode",
-			kind: NodeKind.Store,
-			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
-		};
+		return buildingNodes("StoreNode", "StoreEntrance", NodeKind.Store, center, d);
 	}
 
 	/** A house with an owning family. Door faces -Z (toward the road). */
-	function buildHouse(center: Vector3, index: number, parent: Instance): TownNode {
+	function buildHouse(center: Vector3, index: number, parent: Instance): Array<TownNode> {
 		const model = new Instance("Model");
 		model.Name = `House_${index}`;
 		model.Parent = parent;
@@ -576,15 +606,11 @@ export namespace TownBuilder {
 
 		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: false, chimney: true });
 
-		return {
-			name: `HomeNode_${index}`,
-			kind: NodeKind.Home,
-			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
-		};
+		return buildingNodes(`HomeNode_${index}`, `HomeEntrance_${index}`, NodeKind.Home, center, d);
 	}
 
 	/** The School — work node for the Teacher and all Students. Door faces +Z (the road). */
-	function buildSchool(center: Vector3, parent: Instance): TownNode {
+	function buildSchool(center: Vector3, parent: Instance): Array<TownNode> {
 		const model = new Instance("Model");
 		model.Name = "School";
 		model.Parent = parent;
@@ -662,11 +688,7 @@ export namespace TownBuilder {
 
 		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: true, chimney: false });
 
-		return {
-			name: "SchoolNode",
-			kind: NodeKind.School,
-			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
-		};
+		return buildingNodes("SchoolNode", "SchoolEntrance", NodeKind.School, center, d);
 	}
 
 	/** A leafy tree: square trunk + spherical foliage. Trunk is a small pathfinding obstacle. */
@@ -708,7 +730,7 @@ export namespace TownBuilder {
 	 * the connector road (so it's road-connected and close to everything), with trees and
 	 * benches flanking the path. Lawn is left as grass terrain.
 	 */
-	function buildPark(parent: Instance): TownNode {
+	function buildPark(parent: Instance): Array<TownNode> {
 		const model = new Instance("Model");
 		model.Name = "Park";
 		model.Parent = parent;
@@ -731,7 +753,7 @@ export namespace TownBuilder {
 		for (const rx of [-34, 34]) Props.rock(new Vector3(rx, 0, -46), 2.5, model);
 
 		// Node on the connector road, at the park entrance.
-		return { name: "ParkNode", kind: NodeKind.Park, position: new Vector3(0, 3, -40) };
+		return [{ name: "ParkNode", kind: NodeKind.Park, position: new Vector3(0, 3, -40), spot: "interior" }];
 	}
 
 	/** Road centre-line dashes + a zebra crosswalk at the central intersection. */

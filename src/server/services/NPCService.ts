@@ -1,27 +1,13 @@
 import { Service, OnStart } from "@flamework/core";
 import { PhysicsService, RunService } from "@rbxts/services";
 import { CONFIG } from "../../shared/config";
-import { Role } from "../../shared/enums";
+import { ROLES, POPULATION, RosterEntry } from "../../shared/roles";
 import { NodeSlot } from "../../shared/types";
 import { NPCAgent } from "../npc/NPCAgent";
 import { NPCFactory, NPC_COLLISION_GROUP } from "../npc/NPCFactory";
 import { ScheduleService } from "./ScheduleService";
 import { TimeService } from "./TimeService";
 import { TownService } from "./TownService";
-
-/** Per-NPC home assignment; work/break nodes are derived from the role. */
-interface RosterEntry {
-	role: Role;
-	home: string;
-}
-
-/** Body colour per role so the crowd reads at a glance. */
-const ROLE_COLOR: ReadonlyMap<Role, Color3> = new Map<Role, Color3>([
-	[Role.Shopkeeper, Color3.fromRGB(70, 110, 200)], // blue
-	[Role.Teacher, Color3.fromRGB(150, 90, 190)], // purple
-	[Role.Resident, Color3.fromRGB(210, 140, 70)], // orange
-	[Role.Student, Color3.fromRGB(90, 180, 90)], // green
-]);
 
 /** Random horizontal offset so co-located NPCs don't spawn/stack on the exact same stud. */
 function jitter(radius: number): Vector3 {
@@ -30,7 +16,7 @@ function jitter(radius: number): Vector3 {
 
 /**
  * Spawns and owns the town's population; ticks every NPC's state machine (server authority).
- * One fixed-interval Heartbeat loop drives them all (BUILD_PLAN §A2).
+ * Role data (schedule, work/break node, colour) and the roster come from shared `roles.ts`.
  */
 @Service()
 export class NPCService implements OnStart {
@@ -58,44 +44,26 @@ export class NPCService implements OnStart {
 		});
 	}
 
-	/** Which node a role works at during the day. */
-	private workNodeName(role: Role): string {
-		if (role === Role.Shopkeeper) return "StoreNode";
-		if (role === Role.Teacher || role === Role.Student) return "SchoolNode";
-		return "ParkNode"; // Resident: out and about
-	}
-
+	/** Expand POPULATION (shared) into one roster entry per NPC for the current house count. */
 	private buildRoster(): Array<RosterEntry> {
 		const roster = new Array<RosterEntry>();
-		roster.push({ role: Role.Shopkeeper, home: "HomeNode_1" });
-		roster.push({ role: Role.Teacher, home: "HomeNode_2" });
-		// one resident per house
-		for (let i = 1; i <= CONFIG.town.HOUSE_COUNT; i++) {
-			roster.push({ role: Role.Resident, home: `HomeNode_${i}` });
-		}
-		// two students per house
-		for (let i = 1; i <= CONFIG.town.HOUSE_COUNT; i++) {
-			roster.push({ role: Role.Student, home: `HomeNode_${i}` });
-			roster.push({ role: Role.Student, home: `HomeNode_${i}` });
+		for (const entry of POPULATION.unique) roster.push(entry);
+		for (let home = 1; home <= CONFIG.town.HOUSE_COUNT; home++) {
+			for (const role of POPULATION.perHouse) roster.push({ role, homeIndex: home });
 		}
 		return roster;
 	}
 
 	private spawnPopulation(): void {
-		const roster = this.buildRoster();
-		const park = this.townService.getNode("ParkNode");
-		if (park === undefined) {
-			warn("[NPCService] ParkNode missing — aborting population spawn");
-			return;
-		}
-
 		let index = 0;
-		for (const entry of roster) {
+		for (const entry of this.buildRoster()) {
 			index++;
-			const home = this.townService.getNode(entry.home);
-			const work = this.townService.getNode(this.workNodeName(entry.role));
-			if (home === undefined || work === undefined) {
-				warn(`[NPCService] skipping ${entry.role} — missing home/work node`);
+			const cfg = ROLES[entry.role];
+			const home = this.townService.getNode(`HomeNode_${entry.homeIndex}`);
+			const work = this.townService.getNode(cfg.workNode);
+			const park = this.townService.getNode(cfg.breakNode);
+			if (home === undefined || work === undefined || park === undefined) {
+				warn(`[NPCService] skipping ${entry.role} — missing home/work/break node`);
 				continue;
 			}
 
@@ -104,9 +72,8 @@ export class NPCService implements OnStart {
 			const offset = jitter(7);
 			const spawnPos = home.position.add(offset);
 			const npcName = `${entry.role}_${index}`;
-			const color = ROLE_COLOR.get(entry.role) ?? Color3.fromRGB(200, 200, 200);
 
-			const model = NPCFactory.create(npcName, spawnPos, color);
+			const model = NPCFactory.create(npcName, spawnPos, cfg.color);
 			const humanoid = model.FindFirstChildOfClass("Humanoid");
 			const root = model.PrimaryPart;
 			if (humanoid === undefined || root === undefined) {
@@ -119,8 +86,9 @@ export class NPCService implements OnStart {
 			nodeMap.set("work", work.position.add(offset));
 			nodeMap.set("break", park.position.add(offset));
 
-			const schedule = this.scheduleService.getSchedule(entry.role);
-			this.agents.push(new NPCAgent(npcName, model, humanoid, root, schedule, nodeMap));
+			this.agents.push(
+				new NPCAgent(npcName, model, humanoid, root, this.scheduleService.getSchedule(entry.role), nodeMap),
+			);
 		}
 	}
 

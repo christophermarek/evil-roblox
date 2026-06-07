@@ -23,7 +23,8 @@
 		"evil-robloxia:out/server/npc/NavAgent@NavAgent": "server/npc/NavAgent@NavAgent",
 		"evil-robloxia:out/server/npc/StateMachine@StateMachine": "server/npc/StateMachine@StateMachine",
 		"evil-robloxia:out/server/npc/NPCAgent@NPCAgent": "server/npc/NPCAgent@NPCAgent",
-		"evil-robloxia:out/server/services/LightingService@LightingService": "server/services/LightingService@LightingService"
+		"evil-robloxia:out/server/services/LightingService@LightingService": "server/services/LightingService@LightingService",
+		"evil-robloxia:out/client/controllers/TimeController@TimeController": "client/controllers/TimeController@TimeController"
 	},
 	"metadata": {}
 }

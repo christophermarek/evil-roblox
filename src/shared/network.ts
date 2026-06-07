@@ -11,8 +11,9 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-	// e.g. timeOfDayChanged(hour: number)  — added in M2
-	// e.g. heatChanged(level: number)      — added in M4
+	/** Server broadcasts the authoritative time of day (0–24h) for HUD / routine UI. */
+	syncTime: (timeOfDay: number) => void;
+	// e.g. heatChanged(level: number)  — added in M4
 }
 
 export const GlobalEvents = Networking.createEvent<ClientToServerEvents, ServerToClientEvents>();

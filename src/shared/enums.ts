@@ -35,6 +35,8 @@ export enum NodeKind {
 	Park = "Park",
 	Work = "Work",
 	Police = "Police",
+	Bank = "Bank",
+	Cafe = "Cafe",
 }
 
 /** Crime types (villain layer, M4+). Listed now so payouts can live in config. */

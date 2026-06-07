@@ -45,8 +45,33 @@ export class NavAgent {
 		this.humanoid.MoveTo(this.root.Position);
 	}
 
+	/** Within ARRIVAL_RADIUS of the goal counts as arrived (crowds/jitter rarely hit the exact stud). */
+	private atGoal(goal: Vector3): boolean {
+		return this.root.Position.sub(goal).Magnitude <= CONFIG.npc.ARRIVAL_RADIUS;
+	}
+
+	/**
+	 * Move to one waypoint, but cap the wait at STUCK_TIMEOUT (default Humanoid:MoveTo waits
+	 * 8s before giving up — too long when an NPC is wedged on a threshold). Returns whether
+	 * the waypoint was reached; a timeout returns false so walk() recomputes.
+	 */
+	private moveStep(target: Vector3, gen: number): boolean {
+		this.humanoid.MoveTo(target);
+		let reached = false;
+		let done = false;
+		const conn = this.humanoid.MoveToFinished.Connect((r) => {
+			reached = r;
+			done = true;
+		});
+		const deadline = os.clock() + CONFIG.pathfinding.STUCK_TIMEOUT;
+		while (!done && os.clock() < deadline && gen === this.generation) task.wait();
+		conn.Disconnect();
+		return reached;
+	}
+
 	private walk(goal: Vector3, retries: number, gen: number): boolean {
 		if (gen !== this.generation) return false;
+		if (this.atGoal(goal)) return true; // already there
 
 		const [computed] = pcall(() => this.path.ComputeAsync(this.root.Position, goal));
 		if (gen !== this.generation) return false;
@@ -58,8 +83,8 @@ export class NavAgent {
 		// Skip waypoint[0] — it's the agent's current position.
 		for (let i = 1; i < waypoints.size(); i++) {
 			if (gen !== this.generation) return false; // a newer moveTo took over
-			this.humanoid.MoveTo(waypoints[i].Position);
-			const [reached] = this.humanoid.MoveToFinished.Wait();
+			if (this.atGoal(goal)) return true; // close enough; stop early
+			const reached = this.moveStep(waypoints[i].Position, gen);
 			if (gen !== this.generation) return false;
 			if (!reached) {
 				if (retries < CONFIG.pathfinding.MAX_RETRIES) {

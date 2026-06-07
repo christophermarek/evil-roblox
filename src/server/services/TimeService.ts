@@ -1,6 +1,9 @@
 import { Service, OnStart } from "@flamework/core";
 import { Lighting, RunService } from "@rbxts/services";
 import { CONFIG } from "../../shared/config";
+import { GlobalEvents } from "../../shared/network";
+
+const serverEvents = GlobalEvents.createServer({});
 
 /**
  * Authoritative day/night clock. Owns the compressed in-game day, advances it every
@@ -26,7 +29,9 @@ export class TimeService implements OnStart {
 		// Advance the clock every frame (cheap), but only push the replicated
 		// Lighting.ClockTime a few times a second — per-frame writes are wasted work.
 		let writeAccumulator = 0;
+		let broadcastAccumulator = 0;
 		Lighting.ClockTime = this.timeOfDay;
+		serverEvents.syncTime.broadcast(this.timeOfDay);
 		RunService.Heartbeat.Connect((dt) => {
 			this.timeOfDay = (this.timeOfDay + dt * hoursPerSecond) % 24;
 
@@ -34,6 +39,13 @@ export class TimeService implements OnStart {
 			if (writeAccumulator >= 0.2) {
 				writeAccumulator = 0;
 				Lighting.ClockTime = this.timeOfDay;
+			}
+
+			// Broadcast the authoritative time to clients (HUD/routine UI) ~once a second.
+			broadcastAccumulator += dt;
+			if (broadcastAccumulator >= 1) {
+				broadcastAccumulator = 0;
+				serverEvents.syncTime.broadcast(this.timeOfDay);
 			}
 
 			const hour = math.floor(this.timeOfDay);

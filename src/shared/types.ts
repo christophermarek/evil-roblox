@@ -5,11 +5,18 @@
 
 import { NodeKind, NPCState, Role } from "./enums";
 
-/** A named anchor in the town that NPCs route between. */
+/**
+ * A named anchor in the town that NPCs route between.
+ *
+ * Buildings expose two spots: an `interior` node (where NPCs go / where loot lives) and an
+ * `entrance` node at the door (where witnesses stand) — the M4 crime/perception layer needs
+ * to tell "someone is inside robbing" from "someone is loitering at the door" apart.
+ */
 export interface TownNode {
 	name: string;
 	kind: NodeKind;
 	position: Vector3;
+	spot?: "interior" | "entrance";
 }
 
 /** A symbolic destination slot, resolved per-NPC to a concrete node (home/work/break). */
