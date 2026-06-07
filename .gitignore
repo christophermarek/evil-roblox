@@ -1,0 +1,18 @@
+# roblox-ts compiled output
+/out/
+
+# dependencies
+/node_modules/
+
+# Roblox place / lock files
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# build / tooling caches
+*.tsbuildinfo
+
+# OS / editor cruft
+.DS_Store
+*.log
