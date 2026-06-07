@@ -76,7 +76,7 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
   stub files from DESIGN §6 (services/controllers as empty `@Service`/`@Controller` classes
   with `OnStart`). Add `server/runtime.server.ts` + `client/runtime.client.ts` calling
   `Flamework.addPaths(...)` + `Flamework.ignite()`. **DoD:** `npm run build` clean.
-- [ ] **M0.6 dev script + smoke test [Studio]** — `npm run dev` = `rbxtsc -w` + `rojo serve`
+- [x] **M0.6 dev script + smoke test [Studio]** — `npm run dev` = `rbxtsc -w` + `rojo serve`
   concurrently. Sync to Studio, Play. **DoD:** each service/controller prints a `[Service] started`
   log on run — proves Flamework DI + Rojo pipeline work end to end.
 
@@ -84,9 +84,9 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
 
 ### M1 — Static town  *(the "to start with" milestone)*
 
-- [ ] **M1.1 config + enums** — `shared/config.ts` (DAY_LENGTH, NPC_WALK_SPEED, node names,
+- [x] **M1.1 config + enums** — `shared/config.ts` (DAY_LENGTH, NPC_WALK_SPEED, node names,
   tick rate) and `shared/enums.ts` (Role, NPCState, TimeOfDay). **DoD:** imported, builds.
-- [ ] **M1.2 node graph types** — `shared/types.ts`: `TownNode { name, position, kind }`,
+- [x] **M1.2 node graph types** — `shared/types.ts`: `TownNode { name, position, kind }`,
   building/house descriptors. The **node graph is the map contract**. **DoD:** builds.
 - [ ] **M1.3 TownBuilder — baseplate + roads** — code-placed Parts: large baseplate, a simple
   road grid with sidewalks. Anchored, collision-tuned per A2/A3. **DoD [Studio]:** flat town
