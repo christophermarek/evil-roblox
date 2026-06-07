@@ -22,6 +22,10 @@ export class NavAgent {
 			AgentHeight: CONFIG.pathfinding.AGENT_HEIGHT,
 			AgentCanJump: CONFIG.pathfinding.AGENT_CAN_JUMP,
 			WaypointSpacing: CONFIG.pathfinding.WAYPOINT_SPACING,
+			// Make grass expensive so NPCs prefer the carved Concrete road network.
+			Costs: {
+				Grass: CONFIG.pathfinding.GRASS_COST,
+			},
 		});
 	}
 

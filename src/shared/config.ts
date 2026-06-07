@@ -32,7 +32,7 @@ export const CONFIG = {
 
 	/** Pathfinding agent params (see BUILD_PLAN §A2 — fat radius avoids corner-sticking). */
 	pathfinding: {
-		AGENT_RADIUS: 3,
+		AGENT_RADIUS: 2, // NPC is 2 wide; fits the 8-stud sidewalks/driveways with margin
 		AGENT_HEIGHT: 5,
 		AGENT_CAN_JUMP: false,
 		WAYPOINT_SPACING: 4,
@@ -40,6 +40,12 @@ export const CONFIG = {
 		STUCK_TIMEOUT: 2,
 		/** How many times a NavAgent retries (recompute) a blocked/failed leg before giving up. */
 		MAX_RETRIES: 3,
+		/**
+		 * Pathfinding cost of walking on Grass terrain. Roads/sidewalks/driveways are
+		 * carved to Concrete (default cost 1), so a high grass cost makes NPCs prefer
+		 * the road network instead of cutting straight across lawns. (BUILD_PLAN §A2.)
+		 */
+		GRASS_COST: 20,
 	},
 
 	/** Town layout knobs (consumed by TownBuilder in M1). */

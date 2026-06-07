@@ -62,6 +62,33 @@ function createPart(props: PartProps): Part {
 	return part;
 }
 
+/**
+ * Replace grass terrain with Concrete in a footprint (top at y=0) so 3D grass blades
+ * don't poke through roads/building floors, AND so pathfinding sees a cheap surface here
+ * (grass is costed high in NavAgent — concrete corridors become the preferred route).
+ */
+function clearGrass(centerX: number, centerZ: number, sizeX: number, sizeZ: number): void {
+	const depth = 16;
+	Workspace.Terrain.FillBlock(
+		new CFrame(centerX, -depth / 2, centerZ),
+		new Vector3(sizeX, depth, sizeZ),
+		Enum.Material.Concrete,
+	);
+}
+
+/** Lay a flat pavement part AND carve the grass beneath it (roads, sidewalks, driveways). */
+function pavement(center: Vector3, sizeXZ: Vector2, color: Color3, name: string, parent: Instance): void {
+	createPart({
+		size: new Vector3(sizeXZ.X, 0.2, sizeXZ.Y),
+		position: center,
+		color,
+		material: Enum.Material.Asphalt,
+		name,
+		parent,
+	});
+	clearGrass(center.X, center.Z, sizeXZ.X, sizeXZ.Y);
+}
+
 /** A small, walkable marker part at a node (debug aid + a concrete pathfinding target). */
 function createNodeMarker(node: TownNode, parent: Instance): void {
 	createPart({
@@ -140,46 +167,32 @@ export namespace TownBuilder {
 		// quality permitting) — no extra flag needed in this API version.
 	}
 
+	const ROAD_WIDTH = 24;
+	const ROAD_Y = 0.1;
+	/** Inner edge of the sidewalks (= edge of the main road). */
+	const SIDEWALK_Z = ROAD_WIDTH / 2 + 4; // 16
+
 	function buildRoads(parent: Instance): void {
 		const roads = new Instance("Folder");
 		roads.Name = "Roads";
 		roads.Parent = parent;
 
-		const roadLen = 260;
-		const roadWidth = 24;
-		const y = 0.1; // sit just above the grass
+		const roadLen = 280;
 
-		// Main east–west road along X at z = 0.
-		createPart({
-			size: new Vector3(roadLen, 0.2, roadWidth),
-			position: new Vector3(0, y, 0),
-			color: COLOR.road,
-			material: Enum.Material.Asphalt,
-			name: "MainRoad",
-			parent: roads,
-		});
-
-		// Sidewalks flanking the main road.
+		// Main east–west road along X at z = 0, with sidewalks flanking it.
+		pavement(new Vector3(0, ROAD_Y, 0), new Vector2(roadLen, ROAD_WIDTH), COLOR.road, "MainRoad", roads);
 		for (const dz of [-1, 1]) {
-			createPart({
-				size: new Vector3(roadLen, 0.3, 6),
-				position: new Vector3(0, y, dz * (roadWidth / 2 + 3)),
-				color: COLOR.sidewalk,
-				material: Enum.Material.Concrete,
-				name: "Sidewalk",
-				parent: roads,
-			});
+			pavement(
+				new Vector3(0, ROAD_Y, dz * SIDEWALK_Z),
+				new Vector2(roadLen, 8),
+				COLOR.sidewalk,
+				"Sidewalk",
+				roads,
+			);
 		}
 
-		// Connector road north–south at x = 0, linking houses <-> store.
-		createPart({
-			size: new Vector3(roadWidth, 0.2, 110),
-			position: new Vector3(0, y, 0),
-			color: COLOR.road,
-			material: Enum.Material.Asphalt,
-			name: "ConnectorRoad",
-			parent: roads,
-		});
+		// North–south connector road at x = 0, linking the house row and the store.
+		pavement(new Vector3(0, ROAD_Y, 0), new Vector2(ROAD_WIDTH, 130), COLOR.road, "ConnectorRoad", roads);
 	}
 
 	/** General Store — the first big rob target. Door faces +Z (the road). */
@@ -192,6 +205,19 @@ export namespace TownBuilder {
 		const d = 30;
 		const h = 14;
 		const t = 1;
+
+		// Carve grass out from under the building, and pave a walk from the door (+Z face,
+		// facing the road) to the road's south edge so NPCs have a cheap connected route.
+		clearGrass(center.X, center.Z, w, d);
+		const doorZ = center.Z + d / 2; // -30, the road-facing face
+		const roadEdge = -ROAD_WIDTH / 2; // -12, south edge of the main road
+		pavement(
+			new Vector3(center.X, ROAD_Y, (doorZ + roadEdge) / 2),
+			new Vector2(12, roadEdge - doorZ),
+			COLOR.sidewalk,
+			"StoreWalk",
+			model,
+		);
 
 		// floor
 		createPart({
@@ -269,6 +295,19 @@ export namespace TownBuilder {
 		const d = 22;
 		const h = 12;
 		const t = 1;
+
+		// Carve grass from under the house + pave a driveway from the door (-Z face) to
+		// the road's north edge, so each home connects to the road network cheaply.
+		clearGrass(center.X, center.Z, w, d);
+		const doorZ = center.Z - d / 2; // 34, the road-facing face
+		const roadEdge = ROAD_WIDTH / 2; // 12, north edge of the main road
+		pavement(
+			new Vector3(center.X, ROAD_Y, (doorZ + roadEdge) / 2),
+			new Vector2(8, doorZ - roadEdge),
+			COLOR.sidewalk,
+			"Driveway",
+			model,
+		);
 
 		// floor
 		createPart({
