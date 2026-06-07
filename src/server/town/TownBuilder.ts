@@ -37,6 +37,16 @@ const COLOR = {
 	node: Color3.fromRGB(255, 230, 0),
 };
 
+/** Per-house wall+roof color pairs so the residential row isn't a row of clones. */
+const HOUSE_PALETTES: ReadonlyArray<{ wall: Color3; roof: Color3 }> = [
+	{ wall: Color3.fromRGB(196, 174, 137), roof: Color3.fromRGB(122, 72, 52) },
+	{ wall: Color3.fromRGB(176, 186, 192), roof: Color3.fromRGB(70, 84, 96) },
+	{ wall: Color3.fromRGB(158, 178, 150), roof: Color3.fromRGB(86, 70, 58) },
+	{ wall: Color3.fromRGB(206, 160, 150), roof: Color3.fromRGB(108, 60, 56) },
+	{ wall: Color3.fromRGB(214, 198, 150), roof: Color3.fromRGB(96, 80, 64) },
+	{ wall: Color3.fromRGB(150, 162, 184), roof: Color3.fromRGB(72, 64, 88) },
+];
+
 /**
  * Replace grass terrain with Concrete in a footprint (top at y=0) so 3D grass blades
  * don't poke through roads/building floors, AND so pathfinding sees a cheap surface here
@@ -298,6 +308,30 @@ export namespace TownBuilder {
 	}
 
 	/**
+	 * A pitched gable roof (ridge running along X) built from two mirrored WedgeParts,
+	 * with a slight eave overhang. `baseY` is the top of the walls.
+	 */
+	function gableRoof(center: Vector3, w: number, d: number, baseY: number, height: number, color: Color3, parent: Instance): void {
+		const ww = w + 2;
+		const halfD = (d + 2) / 2;
+		for (const side of [1, -1]) {
+			const wedge = new Instance("WedgePart");
+			wedge.Anchored = true;
+			wedge.Size = new Vector3(ww, height, halfD);
+			wedge.Color = color;
+			wedge.Material = Enum.Material.Slate;
+			wedge.CanCollide = true;
+			wedge.TopSurface = Enum.SurfaceType.Smooth;
+			wedge.BottomSurface = Enum.SurfaceType.Smooth;
+			const base = new CFrame(center.X, baseY + height / 2, center.Z + side * (halfD / 2));
+			// side=+1: default wedge (tall face at -Z = ridge) slopes to +Z eave.
+			// side=-1: rotate 180° about Y so the tall face points +Z (ridge), sloping to -Z.
+			wedge.CFrame = side === 1 ? base : base.mul(CFrame.Angles(0, math.pi, 0));
+			wedge.Parent = parent;
+		}
+	}
+
+	/**
 	 * Facade detail shared by all buildings: door trim, framed windows on the side + back
 	 * walls, optional entrance awning, optional chimney. The front (door) wall is left clear.
 	 */
@@ -312,13 +346,45 @@ export namespace TownBuilder {
 	): void {
 		const FLOOR_TOP = 0.4;
 		const facing = center.Z >= 0 ? -1 : 1; // door faces toward the road (z = 0)
+		const trim = Color3.fromRGB(60, 52, 44);
 
+		// Eave/cornice line: a thin wider band capping the walls (decorative, above head).
+		createPart({
+			size: new Vector3(w + 1.2, 0.8, d + 1.2),
+			position: center.add(new Vector3(0, FLOOR_TOP + h + 0.1, 0)),
+			color: trim,
+			canCollide: false,
+			name: "Cornice",
+			parent: model,
+		});
+
+		// Door header + jambs framing the entrance.
 		createPart({
 			size: new Vector3(doorGap + 2, 1, 1.4),
 			position: center.add(new Vector3(0, FLOOR_TOP + h - 0.5, facing * (d / 2))),
-			color: Color3.fromRGB(60, 52, 44),
+			color: trim,
 			canCollide: false,
-			name: "DoorTrim",
+			name: "DoorHeader",
+			parent: model,
+		});
+		for (const s of [-1, 1]) {
+			createPart({
+				size: new Vector3(0.7, h - 1, 1.4),
+				position: center.add(new Vector3(s * (doorGap / 2), FLOOR_TOP + (h - 1) / 2, facing * (d / 2))),
+				color: trim,
+				canCollide: false,
+				name: "DoorJamb",
+				parent: model,
+			});
+		}
+
+		// A flat stoop step just outside the door (flush, walkable).
+		createPart({
+			size: new Vector3(doorGap + 2, 0.4, 3),
+			position: center.add(new Vector3(0, 0.2, facing * (d / 2 + 1.5))),
+			color: Color3.fromRGB(150, 146, 140),
+			material: Enum.Material.Concrete,
+			name: "Stoop",
 			parent: model,
 		});
 
@@ -449,6 +515,9 @@ export namespace TownBuilder {
 		const d = 22;
 		const h = 12;
 		const t = 1;
+		const palette = HOUSE_PALETTES[(index - 1) % HOUSE_PALETTES.size()];
+		const wallColor = palette.wall;
+		const roofColor = palette.roof;
 
 		// Carve grass from under the house + pave a driveway from the door (-Z face) to
 		// the road's north edge, so each home connects to the road network cheaply.
@@ -476,7 +545,7 @@ export namespace TownBuilder {
 		createPart({
 			size: new Vector3(w, h, t),
 			position: center.add(new Vector3(0, h / 2 + 0.4, d / 2)),
-			color: COLOR.houseWall,
+			color: wallColor,
 			name: "WallBack",
 			parent: model,
 		});
@@ -485,7 +554,7 @@ export namespace TownBuilder {
 			createPart({
 				size: new Vector3(t, h, d),
 				position: center.add(new Vector3(dx * (w / 2), h / 2 + 0.4, 0)),
-				color: COLOR.houseWall,
+				color: wallColor,
 				name: "WallSide",
 				parent: model,
 			});
@@ -497,20 +566,13 @@ export namespace TownBuilder {
 			createPart({
 				size: new Vector3(sideW, h, t),
 				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 0.4, -d / 2)),
-				color: COLOR.houseWall,
+				color: wallColor,
 				name: "WallFront",
 				parent: model,
 			});
 		}
-		// pitched-ish roof (single slab, kept cheap)
-		createPart({
-			size: new Vector3(w + 2, t, d + 2),
-			position: center.add(new Vector3(0, h + 0.4, 0)),
-			color: COLOR.houseRoof,
-			material: Enum.Material.Slate,
-			name: "Roof",
-			parent: model,
-		});
+		// Pitched gable roof (two wedges) for a real house silhouette.
+		gableRoof(center, w, d, 0.4 + h, 8, roofColor, model);
 
 		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: false, chimney: true });
 

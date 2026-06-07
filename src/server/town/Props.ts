@@ -245,19 +245,14 @@ export namespace Props {
 
 	// ── Stage 3/4: facade + nature + vehicles ──────────────────────────────────
 
-	/** A framed, translucent window. `normalAxis` is the wall's facing axis. */
+	/** A detailed window: frame + glass + muntin cross + sill + shutters. `normalAxis` is
+	 *  the wall's facing axis. All cosmetic (non-colliding). */
 	export function window(center: Vector3, normalAxis: "x" | "z", paneW: number, paneH: number, parent: Instance): void {
-		const frameSize = normalAxis === "x" ? new Vector3(0.5, paneH + 1, paneW + 1) : new Vector3(paneW + 1, paneH + 1, 0.5);
-		const glassSize = normalAxis === "x" ? new Vector3(0.7, paneH, paneW) : new Vector3(paneW, paneH, 0.7);
-		createPart({
-			size: frameSize,
-			position: center,
-			color: Color3.fromRGB(70, 58, 48),
-			material: Enum.Material.Wood,
-			canCollide: false,
-			name: "WindowFrame",
-			parent,
-		});
+		const onX = normalAxis === "x";
+		const frameColor = Color3.fromRGB(72, 60, 50);
+		const frameSize = onX ? new Vector3(0.5, paneH + 1, paneW + 1) : new Vector3(paneW + 1, paneH + 1, 0.5);
+		const glassSize = onX ? new Vector3(0.7, paneH, paneW) : new Vector3(paneW, paneH, 0.7);
+		createPart({ size: frameSize, position: center, color: frameColor, material: Enum.Material.Wood, canCollide: false, name: "WindowFrame", parent });
 		createPart({
 			size: glassSize,
 			position: center,
@@ -269,6 +264,29 @@ export namespace Props {
 			name: "WindowGlass",
 			parent,
 		});
+		// Muntin cross (vertical + horizontal bar).
+		const vBar = onX ? new Vector3(0.8, paneH, 0.2) : new Vector3(0.2, paneH, 0.8);
+		const hBar = onX ? new Vector3(0.8, 0.2, paneW) : new Vector3(paneW, 0.2, 0.8);
+		createPart({ size: vBar, position: center, color: frameColor, material: Enum.Material.Wood, canCollide: false, name: "Muntin", parent });
+		createPart({ size: hBar, position: center, color: frameColor, material: Enum.Material.Wood, canCollide: false, name: "Muntin", parent });
+		// Sill ledge under the glass.
+		const sillSize = onX ? new Vector3(1, 0.4, paneW + 1.4) : new Vector3(paneW + 1.4, 0.4, 1);
+		createPart({
+			size: sillSize,
+			position: center.add(new Vector3(0, -paneH / 2 - 0.4, 0)),
+			color: Color3.fromRGB(120, 112, 100),
+			material: Enum.Material.Concrete,
+			canCollide: false,
+			name: "WindowSill",
+			parent,
+		});
+		// Shutters flanking the glass.
+		const shutterColor = Color3.fromRGB(66, 92, 80);
+		const shutterSize = onX ? new Vector3(0.35, paneH, paneW * 0.42) : new Vector3(paneW * 0.42, paneH, 0.35);
+		for (const s of [-1, 1]) {
+			const off = onX ? new Vector3(0.1, 0, s * (paneW / 2 + paneW * 0.24)) : new Vector3(s * (paneW / 2 + paneW * 0.24), 0, 0.1);
+			createPart({ size: shutterSize, position: center.add(off), color: shutterColor, material: Enum.Material.WoodPlanks, canCollide: false, name: "Shutter", parent });
+		}
 	}
 
 	/** A sloped fabric awning over an entrance, tilting down toward the road (±Z). */
@@ -285,11 +303,11 @@ export namespace Props {
 		p.CFrame = new CFrame(center).mul(CFrame.Angles(math.rad(facing * 22), 0, 0));
 	}
 
-	/** A brick chimney on a roof. */
+	/** A brick chimney on a roof (tall enough to poke through a gable). */
 	export function chimney(pos: Vector3, parent: Instance): void {
 		createPart({
-			size: new Vector3(2.5, 5, 2.5),
-			position: pos.add(new Vector3(0, 2.5, 0)),
+			size: new Vector3(2.5, 9, 2.5),
+			position: pos.add(new Vector3(0, 4.5, 0)),
 			color: Color3.fromRGB(120, 70, 60),
 			material: Enum.Material.Brick,
 			name: "Chimney",
@@ -297,7 +315,7 @@ export namespace Props {
 		});
 		createPart({
 			size: new Vector3(3, 0.6, 3),
-			position: pos.add(new Vector3(0, 5.2, 0)),
+			position: pos.add(new Vector3(0, 9.2, 0)),
 			color: Color3.fromRGB(60, 60, 64),
 			canCollide: false,
 			name: "ChimneyCap",
