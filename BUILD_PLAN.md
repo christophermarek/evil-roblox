@@ -67,12 +67,12 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
 - [x] **M0.2 npm + deps** — `package.json`; install `roblox-ts`, `@flamework/core`,
   `@flamework/networking`, `@rbxts/services`, `@rbxts/types`, `rbxts-transformer-flamework`,
   `rojo` (or rely on global). **DoD:** `npm install` succeeds.
-- [ ] **M0.3 tsconfig** — strict mode, JSX=Roact, Flamework transformer plugin, `outDir: out`.
+- [x] **M0.3 tsconfig** — strict mode, JSX=Roact, Flamework transformer plugin, `outDir: out`.
   **DoD:** `npx rbxtsc` runs with no source files yet (no errors).
-- [ ] **M0.4 Rojo project** — `default.project.json` mapping `out/shared`→ReplicatedStorage,
+- [x] **M0.4 Rojo project** — `default.project.json` mapping `out/shared`→ReplicatedStorage,
   `out/server`→ServerScriptService, `out/client`→StarterPlayerScripts, plus a `Workspace`
   with `StreamingEnabled = true`. **DoD:** `rojo serve` starts; `.gitignore` covers locks.
-- [ ] **M0.5 src tree + Flamework bootstrap** — create `src/{shared,server,client}` and the
+- [x] **M0.5 src tree + Flamework bootstrap** — create `src/{shared,server,client}` and the
   stub files from DESIGN §6 (services/controllers as empty `@Service`/`@Controller` classes
   with `OnStart`). Add `server/runtime.server.ts` + `client/runtime.client.ts` calling
   `Flamework.addPaths(...)` + `Flamework.ignite()`. **DoD:** `npm run build` clean.

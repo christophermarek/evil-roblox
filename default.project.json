@@ -1,0 +1,49 @@
+{
+  "name": "evil-robloxia",
+  "globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "rbxts_include": {
+        "$path": "include",
+        "node_modules": {
+          "$className": "Folder",
+          "@flamework": { "$path": "node_modules/@flamework" },
+          "@rbxts": { "$path": "node_modules/@rbxts" }
+        }
+      },
+      "TS": {
+        "$path": "out/shared"
+      }
+    },
+
+    "ServerScriptService": {
+      "TS": {
+        "$path": "out/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "TS": {
+          "$path": "out/client"
+        }
+      }
+    },
+
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": true,
+        "StreamingMinRadius": 256,
+        "StreamingTargetRadius": 1024
+      }
+    },
+
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
+  }
+}

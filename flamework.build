@@ -1,0 +1,25 @@
+{
+	"version": 1,
+	"flameworkVersion": "1.3.2",
+	"identifiers": {
+		"evil-robloxia:out/client/controllers/CameraController@CameraController": "client/controllers/CameraController@CameraController",
+		"evil-robloxia:out/client/controllers/HUDController@HUDController": "client/controllers/HUDController@HUDController",
+		"evil-robloxia:out/client/controllers/InputController@InputController": "client/controllers/InputController@InputController",
+		"evil-robloxia:out/client/controllers/InteractionController@InteractionController": "client/controllers/InteractionController@InteractionController",
+		"evil-robloxia:out/client/controllers/NotificationController@NotificationController": "client/controllers/NotificationController@NotificationController",
+		"evil-robloxia:out/client/controllers/RoutineController@RoutineController": "client/controllers/RoutineController@RoutineController",
+		"evil-robloxia:out/server/services/CrimeService@CrimeService": "server/services/CrimeService@CrimeService",
+		"evil-robloxia:out/server/services/DataService@DataService": "server/services/DataService@DataService",
+		"evil-robloxia:out/server/services/EconomyService@EconomyService": "server/services/EconomyService@EconomyService",
+		"evil-robloxia:out/server/services/HeatService@HeatService": "server/services/HeatService@HeatService",
+		"evil-robloxia:out/server/services/NPCService@NPCService": "server/services/NPCService@NPCService",
+		"evil-robloxia:out/server/services/PerceptionService@PerceptionService": "server/services/PerceptionService@PerceptionService",
+		"evil-robloxia:out/server/services/PoliceService@PoliceService": "server/services/PoliceService@PoliceService",
+		"evil-robloxia:out/server/services/ScheduleService@ScheduleService": "server/services/ScheduleService@ScheduleService",
+		"evil-robloxia:out/server/services/TimeService@TimeService": "server/services/TimeService@TimeService",
+		"evil-robloxia:out/server/services/TownService@TownService": "server/services/TownService@TownService",
+		"evil-robloxia:out/server/services/VehicleService@VehicleService": "server/services/VehicleService@VehicleService",
+		"evil-robloxia:out/shared/network@GlobalEvents": "shared/network@GlobalEvents"
+	},
+	"metadata": {}
+}
