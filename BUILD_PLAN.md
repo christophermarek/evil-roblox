@@ -88,16 +88,16 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
   tick rate) and `shared/enums.ts` (Role, NPCState, TimeOfDay). **DoD:** imported, builds.
 - [x] **M1.2 node graph types** — `shared/types.ts`: `TownNode { name, position, kind }`,
   building/house descriptors. The **node graph is the map contract**. **DoD:** builds.
-- [ ] **M1.3 TownBuilder — baseplate + roads** — code-placed Parts: large baseplate, a simple
+- [x] **M1.3 TownBuilder — baseplate + roads** — code-placed Parts: large baseplate, a simple
   road grid with sidewalks. Anchored, collision-tuned per A2/A3. **DoD [Studio]:** flat town
   ground + roads visible.
-- [ ] **M1.4 TownBuilder — General Store** — one store building (walls, door gap, sign, floor)
+- [x] **M1.4 TownBuilder — General Store** — one store building (walls, door gap, sign, floor)
   as a reusable function. Place a `StoreNode` anchor at its entrance. **DoD [Studio]:** store
   stands on the map with a visible entrance.
-- [ ] **M1.5 TownBuilder — houses** — a `makeHouse()` function; place 4 houses in a residential
+- [x] **M1.5 TownBuilder — houses** — a `makeHouse()` function; place 4 houses in a residential
   row, each with a `HomeNode_#` anchor at its door. **DoD [Studio]:** 4 houses + store + roads
   form a readable little town.
-- [ ] **M1.6 TownService registers nodes** — `TownService` builds the town on `OnStart`,
+- [x] **M1.6 TownService registers nodes** — `TownService` builds the town on `OnStart`,
   collects every anchor into a queryable node registry (`getNode(name)`, `getNodesByKind`).
   **DoD:** server log lists all registered nodes (StoreNode, HomeNode_1..4, etc.).
 

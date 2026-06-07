@@ -9,8 +9,12 @@ import { Role } from "./enums";
 export const CONFIG = {
 	/** Day/night clock. */
 	time: {
-		/** Real seconds for one full in-game day. 1200 = 20 min/day. */
-		DAY_LENGTH_SECONDS: 1200,
+		/**
+		 * Real seconds for one full in-game day.
+		 * 240 = 4 min/day (dev value so schedule transitions are watchable in playtests).
+		 * Production target is ~1200 (20 min/day) — bump this up before shipping.
+		 */
+		DAY_LENGTH_SECONDS: 240,
 		/** Hour of day the world starts at on server boot. */
 		START_HOUR: 7,
 	},
@@ -34,6 +38,8 @@ export const CONFIG = {
 		WAYPOINT_SPACING: 4,
 		/** Seconds before a stuck NPC recomputes its path. */
 		STUCK_TIMEOUT: 2,
+		/** How many times a NavAgent retries (recompute) a blocked/failed leg before giving up. */
+		MAX_RETRIES: 3,
 	},
 
 	/** Town layout knobs (consumed by TownBuilder in M1). */

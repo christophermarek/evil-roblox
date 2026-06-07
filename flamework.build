@@ -19,7 +19,8 @@
 		"evil-robloxia:out/server/services/TimeService@TimeService": "server/services/TimeService@TimeService",
 		"evil-robloxia:out/server/services/TownService@TownService": "server/services/TownService@TownService",
 		"evil-robloxia:out/server/services/VehicleService@VehicleService": "server/services/VehicleService@VehicleService",
-		"evil-robloxia:out/shared/network@GlobalEvents": "shared/network@GlobalEvents"
+		"evil-robloxia:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
+		"evil-robloxia:out/server/npc/NavAgent@NavAgent": "server/npc/NavAgent@NavAgent"
 	},
 	"metadata": {}
 }
