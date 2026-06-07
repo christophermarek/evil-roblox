@@ -2,6 +2,8 @@ import { Workspace } from "@rbxts/services";
 import { CONFIG } from "../../shared/config";
 import { NodeKind } from "../../shared/enums";
 import { TownNode } from "../../shared/types";
+import { createPart } from "./Parts";
+import { Props } from "./Props";
 
 /**
  * Builds the static town from code-placed Parts (BUILD_PLAN §A3): the map lives in git
@@ -34,37 +36,6 @@ const COLOR = {
 	sign: Color3.fromRGB(40, 40, 48),
 	node: Color3.fromRGB(255, 230, 0),
 };
-
-interface PartProps {
-	size: Vector3;
-	position: Vector3;
-	color: Color3;
-	parent: Instance;
-	material?: Enum.Material;
-	canCollide?: boolean;
-	transparency?: number;
-	name?: string;
-}
-
-/** All static geometry shares this hygiene: anchored, no Touched events, query == collide. */
-function createPart(props: PartProps): Part {
-	const part = new Instance("Part");
-	part.Anchored = true;
-	part.Size = props.size;
-	part.Position = props.position;
-	part.Color = props.color;
-	part.Material = props.material ?? Enum.Material.SmoothPlastic;
-	part.CanCollide = props.canCollide ?? true;
-	part.CanTouch = false; // we never use .Touched on static geometry
-	// Perception raycasts (M4) only care about solid sight-blockers; match collision.
-	part.CanQuery = props.canCollide ?? true;
-	part.Transparency = props.transparency ?? 0;
-	part.TopSurface = Enum.SurfaceType.Smooth;
-	part.BottomSurface = Enum.SurfaceType.Smooth;
-	if (props.name !== undefined) part.Name = props.name;
-	part.Parent = props.parent;
-	return part;
-}
 
 /**
  * Replace grass terrain with Concrete in a footprint (top at y=0) so 3D grass blades
@@ -148,6 +119,9 @@ export namespace TownBuilder {
 			nodes.push(buildHouse(center, i + 1, town));
 		}
 
+		addRoadMarkings(town);
+		decorateStreets(town);
+
 		// Drop a visible marker at every node.
 		for (const node of nodes) createNodeMarker(node, nodesFolder);
 
@@ -227,8 +201,8 @@ export namespace TownBuilder {
 
 		// floor
 		createPart({
-			size: new Vector3(w, 1, d),
-			position: center.add(new Vector3(0, 0.5, 0)),
+			size: new Vector3(w, 0.4, d),
+			position: center.add(new Vector3(0, 0.2, 0)),
 			color: COLOR.sidewalk,
 			material: Enum.Material.Concrete,
 			name: "Floor",
@@ -237,7 +211,7 @@ export namespace TownBuilder {
 		// back wall (north, +Z)  — solid
 		createPart({
 			size: new Vector3(w, h, t),
-			position: center.add(new Vector3(0, h / 2 + 1, -d / 2)),
+			position: center.add(new Vector3(0, h / 2 + 0.4, -d / 2)),
 			color: COLOR.storeWall,
 			name: "WallBack",
 			parent: model,
@@ -246,19 +220,19 @@ export namespace TownBuilder {
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(t, h, d),
-				position: center.add(new Vector3(dx * (w / 2), h / 2 + 1, 0)),
+				position: center.add(new Vector3(dx * (w / 2), h / 2 + 0.4, 0)),
 				color: COLOR.storeWall,
 				name: "WallSide",
 				parent: model,
 			});
 		}
 		// front wall (toward road, +Z) with a central door gap
-		const doorGap = 8;
+		const doorGap = 12;
 		const sideW = (w - doorGap) / 2;
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(sideW, h, t),
-				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 1, d / 2)),
+				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 0.4, d / 2)),
 				color: COLOR.storeWall,
 				name: "WallFront",
 				parent: model,
@@ -267,7 +241,7 @@ export namespace TownBuilder {
 		// roof
 		createPart({
 			size: new Vector3(w + 2, t, d + 2),
-			position: center.add(new Vector3(0, h + 1, 0)),
+			position: center.add(new Vector3(0, h + 0.4, 0)),
 			color: COLOR.storeRoof,
 			name: "Roof",
 			parent: model,
@@ -287,7 +261,7 @@ export namespace TownBuilder {
 		return {
 			name: "StoreNode",
 			kind: NodeKind.Store,
-			position: center.add(new Vector3(0, 3, d / 2 + 6)),
+			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
 		};
 	}
 
@@ -317,8 +291,8 @@ export namespace TownBuilder {
 
 		// floor
 		createPart({
-			size: new Vector3(w, 1, d),
-			position: center.add(new Vector3(0, 0.5, 0)),
+			size: new Vector3(w, 0.4, d),
+			position: center.add(new Vector3(0, 0.2, 0)),
 			color: COLOR.door,
 			material: Enum.Material.WoodPlanks,
 			name: "Floor",
@@ -327,7 +301,7 @@ export namespace TownBuilder {
 		// back wall (north, +Z)
 		createPart({
 			size: new Vector3(w, h, t),
-			position: center.add(new Vector3(0, h / 2 + 1, d / 2)),
+			position: center.add(new Vector3(0, h / 2 + 0.4, d / 2)),
 			color: COLOR.houseWall,
 			name: "WallBack",
 			parent: model,
@@ -336,19 +310,19 @@ export namespace TownBuilder {
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(t, h, d),
-				position: center.add(new Vector3(dx * (w / 2), h / 2 + 1, 0)),
+				position: center.add(new Vector3(dx * (w / 2), h / 2 + 0.4, 0)),
 				color: COLOR.houseWall,
 				name: "WallSide",
 				parent: model,
 			});
 		}
 		// front wall (toward road, -Z) with a door gap
-		const doorGap = 6;
+		const doorGap = 8;
 		const sideW = (w - doorGap) / 2;
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(sideW, h, t),
-				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 1, -d / 2)),
+				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 0.4, -d / 2)),
 				color: COLOR.houseWall,
 				name: "WallFront",
 				parent: model,
@@ -357,7 +331,7 @@ export namespace TownBuilder {
 		// pitched-ish roof (single slab, kept cheap)
 		createPart({
 			size: new Vector3(w + 2, t, d + 2),
-			position: center.add(new Vector3(0, h + 1, 0)),
+			position: center.add(new Vector3(0, h + 0.4, 0)),
 			color: COLOR.houseRoof,
 			material: Enum.Material.Slate,
 			name: "Roof",
@@ -368,7 +342,7 @@ export namespace TownBuilder {
 		return {
 			name: `HomeNode_${index}`,
 			kind: NodeKind.Home,
-			position: center.add(new Vector3(0, 3, -(d / 2) - 5)),
+			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
 		};
 	}
 
@@ -395,8 +369,8 @@ export namespace TownBuilder {
 		);
 
 		createPart({
-			size: new Vector3(w, 1, d),
-			position: center.add(new Vector3(0, 0.5, 0)),
+			size: new Vector3(w, 0.4, d),
+			position: center.add(new Vector3(0, 0.2, 0)),
 			color: COLOR.sidewalk,
 			material: Enum.Material.Concrete,
 			name: "Floor",
@@ -404,7 +378,7 @@ export namespace TownBuilder {
 		});
 		createPart({
 			size: new Vector3(w, h, t),
-			position: center.add(new Vector3(0, h / 2 + 1, -d / 2)),
+			position: center.add(new Vector3(0, h / 2 + 0.4, -d / 2)),
 			color: COLOR.schoolWall,
 			material: Enum.Material.Brick,
 			name: "WallBack",
@@ -413,19 +387,19 @@ export namespace TownBuilder {
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(t, h, d),
-				position: center.add(new Vector3(dx * (w / 2), h / 2 + 1, 0)),
+				position: center.add(new Vector3(dx * (w / 2), h / 2 + 0.4, 0)),
 				color: COLOR.schoolWall,
 				material: Enum.Material.Brick,
 				name: "WallSide",
 				parent: model,
 			});
 		}
-		const doorGap = 10;
+		const doorGap = 14;
 		const sideW = (w - doorGap) / 2;
 		for (const dx of [-1, 1]) {
 			createPart({
 				size: new Vector3(sideW, h, t),
-				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 1, d / 2)),
+				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 0.4, d / 2)),
 				color: COLOR.schoolWall,
 				material: Enum.Material.Brick,
 				name: "WallFront",
@@ -434,7 +408,7 @@ export namespace TownBuilder {
 		}
 		createPart({
 			size: new Vector3(w + 2, t, d + 2),
-			position: center.add(new Vector3(0, h + 1, 0)),
+			position: center.add(new Vector3(0, h + 0.4, 0)),
 			color: COLOR.schoolRoof,
 			name: "Roof",
 			parent: model,
@@ -452,7 +426,7 @@ export namespace TownBuilder {
 		return {
 			name: "SchoolNode",
 			kind: NodeKind.School,
-			position: center.add(new Vector3(0, 3, d / 2 + 6)),
+			position: center.add(new Vector3(0, 3, 0)), // interior — NPCs walk inside
 		};
 	}
 
@@ -510,5 +484,94 @@ export namespace TownBuilder {
 
 		// Node on the connector road, at the park entrance.
 		return { name: "ParkNode", kind: NodeKind.Park, position: new Vector3(0, 3, -40) };
+	}
+
+	/** Road centre-line dashes + a zebra crosswalk at the central intersection. */
+	function addRoadMarkings(parent: Instance): void {
+		const folder = new Instance("Folder");
+		folder.Name = "RoadMarkings";
+		folder.Parent = parent;
+		const y = 0.25; // just above the asphalt (road top = 0.2)
+		const dash = Color3.fromRGB(228, 212, 120);
+		const white = Color3.fromRGB(235, 235, 235);
+
+		// Centre dashes along the main road (skip the intersection zone).
+		for (let x = -132; x <= 132; x += 12) {
+			if (math.abs(x) < 16) continue;
+			createPart({
+				size: new Vector3(5, 0.08, 0.7),
+				position: new Vector3(x, y, 0),
+				color: dash,
+				canCollide: false,
+				name: "Dash",
+				parent: folder,
+			});
+		}
+		// Centre dashes along the connector road.
+		for (let z = -60; z <= 60; z += 12) {
+			if (math.abs(z) < 16) continue;
+			createPart({
+				size: new Vector3(0.7, 0.08, 5),
+				position: new Vector3(0, y, z),
+				color: dash,
+				canCollide: false,
+				name: "Dash",
+				parent: folder,
+			});
+		}
+		// Zebra crosswalk across the main road at the intersection (x = 0).
+		for (let z = -10; z <= 10; z += 2.6) {
+			createPart({
+				size: new Vector3(9, 0.08, 1.2),
+				position: new Vector3(0, y, z),
+				color: white,
+				canCollide: false,
+				name: "Crosswalk",
+				parent: folder,
+			});
+		}
+	}
+
+	/** Street furniture: lamp posts (night-lights), mailboxes, bins, hydrants, signs, etc. */
+	function decorateStreets(parent: Instance): void {
+		const folder = new Instance("Folder");
+		folder.Name = "StreetDetail";
+		folder.Parent = parent;
+
+		// Lamp posts down both sides of the main road (registered as night-lights).
+		for (let x = -120; x <= 120; x += 40) {
+			for (const z of [-20.5, 20.5]) {
+				nightLights.push(Props.lampPost(new Vector3(x, 0, z), folder));
+			}
+		}
+
+		// One mailbox + a bush + a flower bed at each house.
+		for (const hx of [-75, -25, 25, 75]) {
+			Props.mailbox(new Vector3(hx - 6, 0, 21), folder);
+			Props.bush(new Vector3(hx + 9, 0, 36), folder);
+			Props.flowerBed(new Vector3(hx, 0, 33), 12, 2.5, folder);
+		}
+
+		// Bins + hydrants along the sidewalks.
+		Props.trashCan(new Vector3(-40, 0, 20.5), folder);
+		Props.trashCan(new Vector3(40, 0, 20.5), folder);
+		Props.trashCan(new Vector3(-20, 0, -20.5), folder);
+		Props.trashCan(new Vector3(20, 0, -20.5), folder);
+		Props.hydrant(new Vector3(-110, 0, 20.5), folder);
+		Props.hydrant(new Vector3(108, 0, -20.5), folder);
+
+		// Stop signs at the intersection, bus stop, and some cones by the school.
+		Props.stopSign(new Vector3(16, 0, 16), folder, 0);
+		Props.stopSign(new Vector3(-16, 0, -16), folder, 180);
+		Props.busStop(new Vector3(-108, 0, 21), folder);
+		Props.cone(new Vector3(40, 0, -28), folder);
+		Props.cone(new Vector3(44, 0, -28), folder);
+		Props.cone(new Vector3(48, 0, -28), folder);
+
+		// Bushes + flower beds fronting the store and school.
+		Props.flowerBed(new Vector3(-55, 0, -31), 16, 2.5, folder);
+		Props.flowerBed(new Vector3(55, 0, -30), 18, 2.5, folder);
+		for (const bx of [-72, -38]) Props.bush(new Vector3(bx, 0, -31), folder);
+		for (const bx of [38, 72]) Props.bush(new Vector3(bx, 0, -30), folder);
 	}
 }
