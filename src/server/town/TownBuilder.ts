@@ -175,6 +175,57 @@ export namespace TownBuilder {
 		pavement(new Vector3(0, ROAD_Y, 0), new Vector2(ROAD_WIDTH, 130), COLOR.road, "ConnectorRoad", roads);
 	}
 
+	/**
+	 * Facade detail shared by all buildings: door trim, framed windows on the side + back
+	 * walls, optional entrance awning, optional chimney. The front (door) wall is left clear.
+	 */
+	function addBuildingDetail(
+		model: Instance,
+		center: Vector3,
+		w: number,
+		h: number,
+		d: number,
+		doorGap: number,
+		opts: { windows: boolean; awning: boolean; chimney: boolean },
+	): void {
+		const FLOOR_TOP = 0.4;
+		const facing = center.Z >= 0 ? -1 : 1; // door faces toward the road (z = 0)
+
+		createPart({
+			size: new Vector3(doorGap + 2, 1, 1.4),
+			position: center.add(new Vector3(0, FLOOR_TOP + h - 0.5, facing * (d / 2))),
+			color: Color3.fromRGB(60, 52, 44),
+			canCollide: false,
+			name: "DoorTrim",
+			parent: model,
+		});
+
+		if (opts.windows) {
+			const wy = FLOOR_TOP + h * 0.55;
+			const paneH = math.min(4, h * 0.4);
+			for (const sx of [-1, 1]) {
+				const count = math.max(1, math.floor(d / 12));
+				for (let i = 0; i < count; i++) {
+					const zz = -d / 2 + (d / (count + 1)) * (i + 1);
+					Props.window(center.add(new Vector3(sx * (w / 2), wy, zz)), "x", math.min(4, d / (count + 2)), paneH, model);
+				}
+			}
+			const backZ = -facing * (d / 2);
+			const countB = math.max(1, math.floor(w / 12));
+			for (let i = 0; i < countB; i++) {
+				const xx = -w / 2 + (w / (countB + 1)) * (i + 1);
+				Props.window(center.add(new Vector3(xx, wy, backZ)), "z", math.min(4, w / (countB + 2)), paneH, model);
+			}
+		}
+
+		if (opts.awning) {
+			Props.awning(center.add(new Vector3(0, FLOOR_TOP + h * 0.5, facing * (d / 2 + 2.5))), facing, doorGap + 8, model);
+		}
+		if (opts.chimney) {
+			Props.chimney(center.add(new Vector3(w * 0.28, FLOOR_TOP + h, -d * 0.2)), model);
+		}
+	}
+
 	/** General Store — the first big rob target. Door faces +Z (the road). */
 	function buildStore(center: Vector3, parent: Instance): TownNode {
 		const model = new Instance("Model");
@@ -257,7 +308,8 @@ export namespace TownBuilder {
 			parent: model,
 		});
 
-		// Node just outside the door, on the road side.
+		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: true, chimney: false });
+
 		return {
 			name: "StoreNode",
 			kind: NodeKind.Store,
@@ -338,7 +390,8 @@ export namespace TownBuilder {
 			parent: model,
 		});
 
-		// Node just outside the door, on the road side (-Z).
+		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: false, chimney: true });
+
 		return {
 			name: `HomeNode_${index}`,
 			kind: NodeKind.Home,
@@ -423,6 +476,8 @@ export namespace TownBuilder {
 			parent: model,
 		});
 
+		addBuildingDetail(model, center, w, h, d, doorGap, { windows: true, awning: true, chimney: false });
+
 		return {
 			name: "SchoolNode",
 			kind: NodeKind.School,
@@ -475,12 +530,21 @@ export namespace TownBuilder {
 		model.Parent = parent;
 
 		const cz = -52;
-		for (const dx of [-22, 22]) {
-			tree(new Vector3(dx, 0, cz + 6), model);
-			tree(new Vector3(dx, 0, cz - 6), model);
+		for (const dx of [-26, 26]) {
+			tree(new Vector3(dx, 0, cz + 8), model);
+			tree(new Vector3(dx, 0, cz - 8), model);
 		}
 		bench(new Vector3(-16, 0, -42), model);
 		bench(new Vector3(16, 0, -42), model);
+
+		// A fountain centerpiece, a little playground, beds and hedges.
+		Props.fountain(new Vector3(0, 0, -52), model);
+		Props.slide(new Vector3(-30, 0, -62), model);
+		Props.swingSet(new Vector3(28, 0, -60), model);
+		Props.flowerBed(new Vector3(-14, 0, -60), 8, 3, model);
+		Props.flowerBed(new Vector3(14, 0, -60), 8, 3, model);
+		Props.hedge(new Vector3(0, 0, -70), 60, true, model); // back hedge along the south edge
+		for (const rx of [-34, 34]) Props.rock(new Vector3(rx, 0, -46), 2.5, model);
 
 		// Node on the connector road, at the park entrance.
 		return { name: "ParkNode", kind: NodeKind.Park, position: new Vector3(0, 3, -40) };
@@ -573,5 +637,33 @@ export namespace TownBuilder {
 		Props.flowerBed(new Vector3(55, 0, -30), 18, 2.5, folder);
 		for (const bx of [-72, -38]) Props.bush(new Vector3(bx, 0, -31), folder);
 		for (const bx of [38, 72]) Props.bush(new Vector3(bx, 0, -30), folder);
+
+		// Parked cars: a few at the curb (north side) + one in each house driveway... ish.
+		const carColors = [
+			Color3.fromRGB(180, 60, 55),
+			Color3.fromRGB(50, 80, 150),
+			Color3.fromRGB(60, 60, 66),
+			Color3.fromRGB(210, 200, 190),
+		];
+		Props.car(new Vector3(-95, 0, 14.5), carColors[0], folder);
+		Props.car(new Vector3(-5, 0, 14.5), carColors[1], folder);
+		Props.car(new Vector3(95, 0, -14.5), carColors[2], folder);
+		Props.car(new Vector3(30, 0, 14.5), carColors[3], folder);
+
+		// Power poles + wires running along the far north verge.
+		const poleZ = 26;
+		const poleXs = [-120, -60, 0, 60, 120];
+		for (const px of poleXs) Props.powerPole(new Vector3(px, 0, poleZ), folder);
+		for (let i = 0; i < poleXs.size() - 1; i++) {
+			Props.wire(new Vector3(poleXs[i], 23, poleZ), new Vector3(poleXs[i + 1], 23, poleZ), folder);
+		}
+
+		// Low picket fences framing each front yard (gap left for the driveway).
+		for (const hx of [-75, -25, 25, 75]) {
+			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 5, 0, 24), folder);
+			Props.fenceRun(new Vector3(hx + 5, 0, 24), new Vector3(hx + 12, 0, 24), folder);
+			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 12, 0, 34), folder);
+			Props.fenceRun(new Vector3(hx + 12, 0, 24), new Vector3(hx + 12, 0, 34), folder);
+		}
 	}
 }

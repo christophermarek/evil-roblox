@@ -242,4 +242,335 @@ export namespace Props {
 			parent,
 		});
 	}
+
+	// ── Stage 3/4: facade + nature + vehicles ──────────────────────────────────
+
+	/** A framed, translucent window. `normalAxis` is the wall's facing axis. */
+	export function window(center: Vector3, normalAxis: "x" | "z", paneW: number, paneH: number, parent: Instance): void {
+		const frameSize = normalAxis === "x" ? new Vector3(0.5, paneH + 1, paneW + 1) : new Vector3(paneW + 1, paneH + 1, 0.5);
+		const glassSize = normalAxis === "x" ? new Vector3(0.7, paneH, paneW) : new Vector3(paneW, paneH, 0.7);
+		createPart({
+			size: frameSize,
+			position: center,
+			color: Color3.fromRGB(70, 58, 48),
+			material: Enum.Material.Wood,
+			canCollide: false,
+			name: "WindowFrame",
+			parent,
+		});
+		createPart({
+			size: glassSize,
+			position: center,
+			color: Color3.fromRGB(150, 190, 220),
+			material: Enum.Material.Glass,
+			transparency: 0.45,
+			reflectance: 0.15,
+			canCollide: false,
+			name: "WindowGlass",
+			parent,
+		});
+	}
+
+	/** A sloped fabric awning over an entrance, tilting down toward the road (±Z). */
+	export function awning(center: Vector3, facing: number, width: number, parent: Instance): void {
+		const p = createPart({
+			size: new Vector3(width, 0.4, 5),
+			position: center,
+			color: Color3.fromRGB(170, 60, 60),
+			material: Enum.Material.Fabric,
+			canCollide: false,
+			name: "Awning",
+			parent,
+		});
+		p.CFrame = new CFrame(center).mul(CFrame.Angles(math.rad(facing * 22), 0, 0));
+	}
+
+	/** A brick chimney on a roof. */
+	export function chimney(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(2.5, 5, 2.5),
+			position: pos.add(new Vector3(0, 2.5, 0)),
+			color: Color3.fromRGB(120, 70, 60),
+			material: Enum.Material.Brick,
+			name: "Chimney",
+			parent,
+		});
+		createPart({
+			size: new Vector3(3, 0.6, 3),
+			position: pos.add(new Vector3(0, 5.2, 0)),
+			color: Color3.fromRGB(60, 60, 64),
+			canCollide: false,
+			name: "ChimneyCap",
+			parent,
+		});
+	}
+
+	/** An axis-aligned picket-fence run between two points (decorative, non-colliding). */
+	export function fenceRun(from: Vector3, to: Vector3, parent: Instance): void {
+		const alongX = math.abs(to.X - from.X) >= math.abs(to.Z - from.Z);
+		const length = alongX ? math.abs(to.X - from.X) : math.abs(to.Z - from.Z);
+		if (length < 1) return;
+		const mid = from.add(to).div(2);
+		const railColor = Color3.fromRGB(228, 226, 216);
+		createPart({
+			size: alongX ? new Vector3(length, 0.4, 0.3) : new Vector3(0.3, 0.4, length),
+			position: mid.add(new Vector3(0, 2.4, 0)),
+			color: railColor,
+			material: Enum.Material.Wood,
+			canCollide: false,
+			name: "FenceRail",
+			parent,
+		});
+		const pickets = math.max(1, math.floor(length / 2));
+		for (let i = 0; i <= pickets; i++) {
+			const f = i / pickets;
+			const px = alongX ? from.X + (to.X - from.X) * f : from.X;
+			const pz = alongX ? from.Z : from.Z + (to.Z - from.Z) * f;
+			createPart({
+				size: new Vector3(0.3, 4, 0.3),
+				position: new Vector3(px, 2, pz),
+				color: railColor,
+				material: Enum.Material.Wood,
+				canCollide: false,
+				name: "Picket",
+				parent,
+			});
+		}
+	}
+
+	/** A long hedge box. */
+	export function hedge(center: Vector3, length: number, alongX: boolean, parent: Instance): void {
+		createPart({
+			size: alongX ? new Vector3(length, 3, 2) : new Vector3(2, 3, length),
+			position: center.add(new Vector3(0, 1.5, 0)),
+			color: Color3.fromRGB(60, 110, 55),
+			material: Enum.Material.Grass,
+			canCollide: false,
+			name: "Hedge",
+			parent,
+		});
+	}
+
+	/** A mossy boulder. */
+	export function rock(pos: Vector3, scale: number, parent: Instance): void {
+		const r = createPart({
+			size: new Vector3(scale, scale * 0.7, scale),
+			position: pos.add(new Vector3(0, scale * 0.3, 0)),
+			color: Color3.fromRGB(120, 120, 125),
+			material: Enum.Material.Slate,
+			canCollide: false,
+			name: "Rock",
+			parent,
+		});
+		r.Shape = Enum.PartType.Ball;
+	}
+
+	/** A simple parked car (faces ±X, along the main road). Body + cabin + glass + wheels. */
+	export function car(pos: Vector3, color: Color3, parent: Instance): void {
+		createPart({
+			size: new Vector3(14, 3, 6),
+			position: pos.add(new Vector3(0, 2.5, 0)),
+			color,
+			material: Enum.Material.SmoothPlastic,
+			reflectance: 0.05,
+			name: "CarBody",
+			parent,
+		});
+		createPart({
+			size: new Vector3(7, 3, 5.4),
+			position: pos.add(new Vector3(-0.5, 5, 0)),
+			color,
+			material: Enum.Material.SmoothPlastic,
+			name: "CarCabin",
+			parent,
+		});
+		createPart({
+			size: new Vector3(7.2, 1.8, 5.6),
+			position: pos.add(new Vector3(-0.5, 5.2, 0)),
+			color: Color3.fromRGB(40, 50, 62),
+			material: Enum.Material.Glass,
+			transparency: 0.25,
+			reflectance: 0.2,
+			canCollide: false,
+			name: "CarGlass",
+			parent,
+		});
+		for (const dx of [-4.5, 4.5]) {
+			for (const dz of [-3, 3]) {
+				const wheel = createPart({
+					size: new Vector3(1.2, 2.4, 2.4),
+					position: pos.add(new Vector3(dx, 1, dz)),
+					color: Color3.fromRGB(26, 26, 30),
+					material: Enum.Material.SmoothPlastic,
+					canCollide: false,
+					name: "Wheel",
+					parent,
+				});
+				wheel.Shape = Enum.PartType.Cylinder;
+				wheel.CFrame = new CFrame(pos.add(new Vector3(dx, 1, dz))).mul(CFrame.Angles(0, math.rad(90), 0));
+			}
+		}
+		for (const dz of [-2, 2]) {
+			createPart({
+				size: new Vector3(0.4, 1, 1.2),
+				position: pos.add(new Vector3(7, 2.5, dz)),
+				color: Color3.fromRGB(255, 250, 210),
+				material: Enum.Material.Neon,
+				canCollide: false,
+				name: "Headlight",
+				parent,
+			});
+		}
+	}
+
+	/** A wooden utility pole with a crossarm. Wires are added by the caller between poles. */
+	export function powerPole(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(1, 26, 1),
+			position: pos.add(new Vector3(0, 13, 0)),
+			color: Color3.fromRGB(86, 64, 46),
+			material: Enum.Material.Wood,
+			name: "PolePost",
+			parent,
+		});
+		createPart({
+			size: new Vector3(0.8, 0.8, 9),
+			position: pos.add(new Vector3(0, 23, 0)),
+			color: Color3.fromRGB(86, 64, 46),
+			material: Enum.Material.Wood,
+			canCollide: false,
+			name: "PoleCrossarm",
+			parent,
+		});
+	}
+
+	/** A thin sagging-less wire span between two points (along X or Z). */
+	export function wire(from: Vector3, to: Vector3, parent: Instance): void {
+		const alongX = math.abs(to.X - from.X) >= math.abs(to.Z - from.Z);
+		const length = alongX ? math.abs(to.X - from.X) : math.abs(to.Z - from.Z);
+		createPart({
+			size: alongX ? new Vector3(length, 0.12, 0.12) : new Vector3(0.12, 0.12, length),
+			position: from.add(to).div(2),
+			color: Color3.fromRGB(20, 20, 22),
+			material: Enum.Material.SmoothPlastic,
+			canCollide: false,
+			name: "Wire",
+			parent,
+		});
+	}
+
+	/** A marble fountain: ring basin + water disc + center column. */
+	export function fountain(pos: Vector3, parent: Instance): void {
+		const basin = createPart({
+			size: new Vector3(2, 13, 13),
+			position: pos.add(new Vector3(0, 1, 0)),
+			color: Color3.fromRGB(185, 185, 190),
+			material: Enum.Material.Marble,
+			name: "FountainBasin",
+			parent,
+		});
+		basin.Shape = Enum.PartType.Cylinder;
+		basin.CFrame = new CFrame(pos.add(new Vector3(0, 1, 0))).mul(CFrame.Angles(0, 0, math.rad(90)));
+		const water = createPart({
+			size: new Vector3(0.6, 11, 11),
+			position: pos.add(new Vector3(0, 1.7, 0)),
+			color: Color3.fromRGB(90, 150, 200),
+			material: Enum.Material.Glass,
+			transparency: 0.3,
+			reflectance: 0.2,
+			canCollide: false,
+			name: "FountainWater",
+			parent,
+		});
+		water.Shape = Enum.PartType.Cylinder;
+		water.CFrame = new CFrame(pos.add(new Vector3(0, 1.7, 0))).mul(CFrame.Angles(0, 0, math.rad(90)));
+		createPart({
+			size: new Vector3(2, 5, 2),
+			position: pos.add(new Vector3(0, 3.5, 0)),
+			color: Color3.fromRGB(185, 185, 190),
+			material: Enum.Material.Marble,
+			name: "FountainColumn",
+			parent,
+		});
+	}
+
+	/** A playground slide: raised platform on legs + an angled ramp. */
+	export function slide(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(4, 0.4, 4),
+			position: pos.add(new Vector3(0, 6, 0)),
+			color: Color3.fromRGB(210, 180, 60),
+			material: Enum.Material.Plastic,
+			name: "SlideTop",
+			parent,
+		});
+		for (const dx of [-1.8, 1.8]) {
+			for (const dz of [-1.8, 1.8]) {
+				createPart({
+					size: new Vector3(0.4, 6, 0.4),
+					position: pos.add(new Vector3(dx, 3, dz)),
+					color: Color3.fromRGB(160, 160, 170),
+					material: Enum.Material.Metal,
+					canCollide: false,
+					name: "SlideLeg",
+					parent,
+				});
+			}
+		}
+		const ramp = createPart({
+			size: new Vector3(3, 0.4, 9),
+			position: pos.add(new Vector3(0, 3.6, 5)),
+			color: Color3.fromRGB(220, 80, 80),
+			material: Enum.Material.Plastic,
+			canCollide: false,
+			name: "SlideRamp",
+			parent,
+		});
+		ramp.CFrame = new CFrame(pos.add(new Vector3(0, 3.6, 5))).mul(CFrame.Angles(math.rad(34), 0, 0));
+	}
+
+	/** A swing set: top bar on two A-frames + two hanging seats. */
+	export function swingSet(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(0.5, 0.5, 10),
+			position: pos.add(new Vector3(0, 8, 0)),
+			color: Color3.fromRGB(160, 60, 60),
+			material: Enum.Material.Metal,
+			name: "SwingBar",
+			parent,
+		});
+		for (const dz of [-4.5, 4.5]) {
+			for (const dx of [-2, 2]) {
+				const leg = createPart({
+					size: new Vector3(0.4, 9, 0.4),
+					position: pos.add(new Vector3(dx, 4, dz)),
+					color: Color3.fromRGB(160, 60, 60),
+					material: Enum.Material.Metal,
+					canCollide: false,
+					name: "SwingLeg",
+					parent,
+				});
+				leg.CFrame = new CFrame(pos.add(new Vector3(dx, 4, dz))).mul(CFrame.Angles(0, 0, math.rad(dx > 0 ? 12 : -12)));
+			}
+		}
+		for (const dz of [-2, 2]) {
+			createPart({
+				size: new Vector3(2, 0.3, 0.8),
+				position: pos.add(new Vector3(0, 2.5, dz)),
+				color: Color3.fromRGB(40, 40, 46),
+				material: Enum.Material.Plastic,
+				canCollide: false,
+				name: "SwingSeat",
+				parent,
+			});
+			createPart({
+				size: new Vector3(0.12, 5, 0.12),
+				position: pos.add(new Vector3(0, 5, dz)),
+				color: Color3.fromRGB(60, 60, 64),
+				canCollide: false,
+				name: "SwingChain",
+				parent,
+			});
+		}
+	}
 }

@@ -9,6 +9,9 @@ import { CONFIG } from "../../shared/config";
  * ground (HipHeight 0), with a welded head on top. Humanoid:MoveTo drives the root and
  * the welded parts follow — works with PathfindingService out of the box.
  */
+/** Collision group NPCs belong to — they collide with the world but pass through each other. */
+export const NPC_COLLISION_GROUP = "NPCs";
+
 export namespace NPCFactory {
 	function weld(part0: BasePart, part1: BasePart): void {
 		const wc = new Instance("WeldConstraint");
@@ -30,6 +33,7 @@ export namespace NPCFactory {
 		root.CanCollide = true;
 		root.CanTouch = false;
 		root.CastShadow = true;
+		root.CollisionGroup = NPC_COLLISION_GROUP; // don't shove other NPCs
 		root.CFrame = new CFrame(spawnPos.add(new Vector3(0, 1.5, 0)));
 		root.Parent = model;
 

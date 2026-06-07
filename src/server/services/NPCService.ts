@@ -1,10 +1,10 @@
 import { Service, OnStart } from "@flamework/core";
-import { RunService } from "@rbxts/services";
+import { PhysicsService, RunService } from "@rbxts/services";
 import { CONFIG } from "../../shared/config";
 import { Role } from "../../shared/enums";
 import { NodeSlot } from "../../shared/types";
 import { NPCAgent } from "../npc/NPCAgent";
-import { NPCFactory } from "../npc/NPCFactory";
+import { NPCFactory, NPC_COLLISION_GROUP } from "../npc/NPCFactory";
 import { ScheduleService } from "./ScheduleService";
 import { TimeService } from "./TimeService";
 import { TownService } from "./TownService";
@@ -44,9 +44,18 @@ export class NPCService implements OnStart {
 
 	onStart() {
 		print("[NPCService] started");
+		this.setupCollisionGroup();
 		this.spawnPopulation();
 		print(`[NPCService] spawned ${this.agents.size()} NPCs`);
 		this.startTickLoop();
+	}
+
+	/** NPCs collide with the world but not each other (no shoving / clumping). */
+	private setupCollisionGroup(): void {
+		pcall(() => {
+			PhysicsService.RegisterCollisionGroup(NPC_COLLISION_GROUP);
+			PhysicsService.CollisionGroupSetCollidable(NPC_COLLISION_GROUP, NPC_COLLISION_GROUP, false);
+		});
 	}
 
 	/** Which node a role works at during the day. */
