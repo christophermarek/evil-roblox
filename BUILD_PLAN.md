@@ -105,17 +105,17 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
 
 ### M2 — One believable NPC  *(the "looks real" proof)*
 
-- [ ] **M2.1 TimeService** — authoritative compressed clock (DAY_LENGTH from config), exposes
+- [x] **M2.1 TimeService** — authoritative compressed clock (DAY_LENGTH from config), exposes
   `getTimeOfDay()` (0–24), fires an event on phase changes, drives `Lighting.ClockTime`.
   **DoD [Studio]:** sky visibly cycles day→night over DAY_LENGTH; log prints the hour.
-- [ ] **M2.2 NPC rig + spawner** — `NPCService` spawns one R15 NPC (NPC Kit / cloned rig) at a
+- [x] **M2.2 NPC rig + spawner** — `NPCService` spawns one R15 NPC (NPC Kit / cloned rig) at a
   HomeNode. Apply model hygiene from A2. **DoD [Studio]:** a humanoid NPC stands at a house.
-- [ ] **M2.3 Pathfinding mover** — a `NavAgent` helper: `moveTo(node)` using PathfindingService
+- [x] **M2.3 Pathfinding mover** — a `NavAgent` helper: `moveTo(node)` using PathfindingService
   per A2 (compute once, follow waypoints, handle `Blocked`/stuck, jittered). **DoD [Studio]:**
   NPC walks from its house to the StoreNode smoothly, around corners, no sticking.
-- [ ] **M2.4 FSM core** — `NPCStateMachine` with `onEnter/onUpdate/onExit`; implement
+- [x] **M2.4 FSM core** — `NPCStateMachine` with `onEnter/onUpdate/onExit`; implement
   `AtHome`, `Commuting`, `AtWork`, `Break`, `Sleep`. **DoD:** state transitions log correctly.
-- [ ] **M2.5 ScheduleService (shopkeeper)** — a shopkeeper timetable (wake 7 → store 8 →
+- [x] **M2.5 ScheduleService (shopkeeper)** — a shopkeeper timetable (wake 7 → store 8 →
   **lunch 12** → store 13 → home 18 → sleep 22). ScheduleService maps time-of-day → desired
   node; FSM consumes it. **DoD [Studio]:** the shopkeeper autonomously walks home→store→leaves
   at noon→returns→home at night, looping across days. **← M2 is the realism proof.**

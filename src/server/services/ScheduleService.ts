@@ -7,15 +7,43 @@ import { ScheduleEntry } from "../../shared/types";
  * into this state". Slots (home/work/break) are resolved to concrete nodes per-NPC by
  * NPCService, so one schedule serves every NPC of a role.
  *
- * M2: just the Shopkeeper. M3 adds Resident / Teacher / Student.
+ * Timings are staggered across roles to create believable rush-hour WAVES:
+ *  - 08:00 everyone commutes to work/school (morning rush)
+ *  - 15:00 students flood OUT of school to the park (the street-crowd moment)
+ *  - 18:00 everyone heads home (evening rush)
  */
 const SHOPKEEPER_SCHEDULE: ReadonlyArray<ScheduleEntry> = [
-	{ hour: 7, state: NPCState.AtHome, slot: "home" }, // wake up at home
+	{ hour: 7, state: NPCState.AtHome, slot: "home" },
 	{ hour: 8, state: NPCState.AtWork, slot: "work" }, // open the store
-	{ hour: 12, state: NPCState.Break, slot: "break" }, // ← lunch at the park (store unguarded!)
-	{ hour: 13, state: NPCState.AtWork, slot: "work" }, // back to the store
-	{ hour: 18, state: NPCState.AtHome, slot: "home" }, // close up, head home
-	{ hour: 22, state: NPCState.Sleep, slot: "home" }, // sleep
+	{ hour: 12, state: NPCState.Break, slot: "break" }, // lunch at the park ← store unguarded
+	{ hour: 14, state: NPCState.AtWork, slot: "work" }, // back to the store
+	{ hour: 18, state: NPCState.AtHome, slot: "home" },
+	{ hour: 22, state: NPCState.Sleep, slot: "home" },
+];
+
+const TEACHER_SCHEDULE: ReadonlyArray<ScheduleEntry> = [
+	{ hour: 7, state: NPCState.AtHome, slot: "home" },
+	{ hour: 8, state: NPCState.AtWork, slot: "work" }, // teach at school
+	{ hour: 16, state: NPCState.Break, slot: "break" }, // unwind at the park after class
+	{ hour: 18, state: NPCState.AtHome, slot: "home" },
+	{ hour: 22, state: NPCState.Sleep, slot: "home" },
+];
+
+const STUDENT_SCHEDULE: ReadonlyArray<ScheduleEntry> = [
+	{ hour: 7, state: NPCState.AtHome, slot: "home" },
+	{ hour: 8, state: NPCState.AtWork, slot: "work" }, // school
+	{ hour: 15, state: NPCState.Break, slot: "break" }, // after-school play at the park ← the WAVE
+	{ hour: 18, state: NPCState.AtHome, slot: "home" },
+	{ hour: 21, state: NPCState.Sleep, slot: "home" },
+];
+
+const RESIDENT_SCHEDULE: ReadonlyArray<ScheduleEntry> = [
+	{ hour: 7, state: NPCState.AtHome, slot: "home" },
+	{ hour: 9, state: NPCState.AtWork, slot: "work" }, // out and about (park / town)
+	{ hour: 12, state: NPCState.AtHome, slot: "home" }, // home for lunch
+	{ hour: 14, state: NPCState.AtWork, slot: "work" },
+	{ hour: 18, state: NPCState.AtHome, slot: "home" },
+	{ hour: 22, state: NPCState.Sleep, slot: "home" },
 ];
 
 @Service()
@@ -24,7 +52,10 @@ export class ScheduleService implements OnStart {
 
 	onStart() {
 		this.schedules.set(Role.Shopkeeper, SHOPKEEPER_SCHEDULE);
-		print("[ScheduleService] started — schedules loaded for: Shopkeeper");
+		this.schedules.set(Role.Teacher, TEACHER_SCHEDULE);
+		this.schedules.set(Role.Student, STUDENT_SCHEDULE);
+		this.schedules.set(Role.Resident, RESIDENT_SCHEDULE);
+		print("[ScheduleService] started — schedules loaded for Shopkeeper/Teacher/Student/Resident");
 	}
 
 	/** The daily timetable for a role (empty if none defined yet). */

@@ -26,6 +26,10 @@ const COLOR = {
 	houseRoof: Color3.fromRGB(122, 72, 52),
 	storeWall: Color3.fromRGB(170, 120, 90),
 	storeRoof: Color3.fromRGB(70, 90, 120),
+	schoolWall: Color3.fromRGB(178, 90, 78),
+	schoolRoof: Color3.fromRGB(120, 60, 52),
+	trunk: Color3.fromRGB(96, 64, 40),
+	leaves: Color3.fromRGB(74, 130, 64),
 	door: Color3.fromRGB(92, 64, 40),
 	sign: Color3.fromRGB(40, 40, 48),
 	node: Color3.fromRGB(255, 230, 0),
@@ -127,8 +131,11 @@ export namespace TownBuilder {
 		buildGround();
 		buildRoads(town);
 
-		// Store: south of the road, door facing +Z (toward the road).
-		nodes.push(buildStore(new Vector3(0, 0, -45), town));
+		// South side, road-connected via driveways / the connector road:
+		//   Store (west) — Park (centre, on the connector) — School (east).
+		nodes.push(buildStore(new Vector3(-55, 0, -45), town));
+		nodes.push(buildSchool(new Vector3(55, 0, -45), town));
+		nodes.push(buildPark(town));
 
 		// Houses: a row north of the road, doors facing -Z (toward the road).
 		const count = CONFIG.town.HOUSE_COUNT;
@@ -137,10 +144,6 @@ export namespace TownBuilder {
 			const center = new Vector3(startX + i * 50, 0, 45);
 			nodes.push(buildHouse(center, i + 1, town));
 		}
-
-		// Park leisure node (geometry expands in M3; the anchor exists now).
-		const parkPos = new Vector3(110, 0, 45);
-		nodes.push({ name: "ParkNode", kind: NodeKind.Park, position: parkPos.add(new Vector3(0, 3, 0)) });
 
 		// Drop a visible marker at every node.
 		for (const node of nodes) createNodeMarker(node, nodesFolder);
@@ -364,5 +367,145 @@ export namespace TownBuilder {
 			kind: NodeKind.Home,
 			position: center.add(new Vector3(0, 3, -(d / 2) - 5)),
 		};
+	}
+
+	/** The School — work node for the Teacher and all Students. Door faces +Z (the road). */
+	function buildSchool(center: Vector3, parent: Instance): TownNode {
+		const model = new Instance("Model");
+		model.Name = "School";
+		model.Parent = parent;
+
+		const w = 50;
+		const d = 34;
+		const h = 16;
+		const t = 1;
+
+		clearGrass(center.X, center.Z, w, d);
+		const doorZ = center.Z + d / 2;
+		const roadEdge = -ROAD_WIDTH / 2;
+		pavement(
+			new Vector3(center.X, ROAD_Y, (doorZ + roadEdge) / 2),
+			new Vector2(14, roadEdge - doorZ),
+			COLOR.sidewalk,
+			"SchoolWalk",
+			model,
+		);
+
+		createPart({
+			size: new Vector3(w, 1, d),
+			position: center.add(new Vector3(0, 0.5, 0)),
+			color: COLOR.sidewalk,
+			material: Enum.Material.Concrete,
+			name: "Floor",
+			parent: model,
+		});
+		createPart({
+			size: new Vector3(w, h, t),
+			position: center.add(new Vector3(0, h / 2 + 1, -d / 2)),
+			color: COLOR.schoolWall,
+			material: Enum.Material.Brick,
+			name: "WallBack",
+			parent: model,
+		});
+		for (const dx of [-1, 1]) {
+			createPart({
+				size: new Vector3(t, h, d),
+				position: center.add(new Vector3(dx * (w / 2), h / 2 + 1, 0)),
+				color: COLOR.schoolWall,
+				material: Enum.Material.Brick,
+				name: "WallSide",
+				parent: model,
+			});
+		}
+		const doorGap = 10;
+		const sideW = (w - doorGap) / 2;
+		for (const dx of [-1, 1]) {
+			createPart({
+				size: new Vector3(sideW, h, t),
+				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 1, d / 2)),
+				color: COLOR.schoolWall,
+				material: Enum.Material.Brick,
+				name: "WallFront",
+				parent: model,
+			});
+		}
+		createPart({
+			size: new Vector3(w + 2, t, d + 2),
+			position: center.add(new Vector3(0, h + 1, 0)),
+			color: COLOR.schoolRoof,
+			name: "Roof",
+			parent: model,
+		});
+		createPart({
+			size: new Vector3(w * 0.6, 4, 0.5),
+			position: center.add(new Vector3(0, h - 1, d / 2 + 0.6)),
+			color: COLOR.sign,
+			material: Enum.Material.Neon,
+			canCollide: false,
+			name: "Sign",
+			parent: model,
+		});
+
+		return {
+			name: "SchoolNode",
+			kind: NodeKind.School,
+			position: center.add(new Vector3(0, 3, d / 2 + 6)),
+		};
+	}
+
+	/** A leafy tree: square trunk + spherical foliage. Trunk is a small pathfinding obstacle. */
+	function tree(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(2, 8, 2),
+			position: pos.add(new Vector3(0, 4, 0)),
+			color: COLOR.trunk,
+			material: Enum.Material.Wood,
+			name: "Trunk",
+			parent,
+		});
+		const leaves = createPart({
+			size: new Vector3(10, 10, 10),
+			position: pos.add(new Vector3(0, 11, 0)),
+			color: COLOR.leaves,
+			material: Enum.Material.Grass,
+			canCollide: false,
+			name: "Leaves",
+			parent,
+		});
+		leaves.Shape = Enum.PartType.Ball;
+	}
+
+	/** A park bench (just a seat slab — cosmetic, walkable-around). */
+	function bench(pos: Vector3, parent: Instance): void {
+		createPart({
+			size: new Vector3(6, 1, 2),
+			position: pos.add(new Vector3(0, 2, 0)),
+			color: COLOR.trunk,
+			material: Enum.Material.WoodPlanks,
+			name: "Bench",
+			parent,
+		});
+	}
+
+	/**
+	 * The Park / town square — the communal leisure + lunch node. Sits at the south end of
+	 * the connector road (so it's road-connected and close to everything), with trees and
+	 * benches flanking the path. Lawn is left as grass terrain.
+	 */
+	function buildPark(parent: Instance): TownNode {
+		const model = new Instance("Model");
+		model.Name = "Park";
+		model.Parent = parent;
+
+		const cz = -52;
+		for (const dx of [-22, 22]) {
+			tree(new Vector3(dx, 0, cz + 6), model);
+			tree(new Vector3(dx, 0, cz - 6), model);
+		}
+		bench(new Vector3(-16, 0, -42), model);
+		bench(new Vector3(16, 0, -42), model);
+
+		// Node on the connector road, at the park entrance.
+		return { name: "ParkNode", kind: NodeKind.Park, position: new Vector3(0, 3, -40) };
 	}
 }
