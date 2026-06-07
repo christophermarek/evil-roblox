@@ -82,9 +82,10 @@ export namespace TownBuilder {
 	 * result is identical whether run in Studio or from a `rojo build` place file.
 	 */
 	export function build(): { model: Model; nodes: ReadonlyArray<TownNode> } {
-		// Reproducibility: drop Studio's stock baseplate if present.
+		// Reproducibility: drop Studio's stock baseplate + any prior terrain/town.
 		Workspace.FindFirstChild("Baseplate")?.Destroy();
 		Workspace.FindFirstChild("Town")?.Destroy();
+		Workspace.Terrain.Clear();
 
 		const town = new Instance("Model");
 		town.Name = "Town";
@@ -96,7 +97,7 @@ export namespace TownBuilder {
 
 		const nodes = new Array<TownNode>();
 
-		buildGround(town);
+		buildGround();
 		buildRoads(town);
 
 		// Store: south of the road, door facing +Z (toward the road).
@@ -122,16 +123,21 @@ export namespace TownBuilder {
 
 	// ── pieces ────────────────────────────────────────────────────────────────
 
-	function buildGround(parent: Instance): void {
+	/**
+	 * Real Roblox Terrain (not a Part) so we get proper 3D grass blades.
+	 * A flat grass slab whose top surface sits at y = 0, so buildings still sit on top.
+	 */
+	function buildGround(): void {
+		const terrain = Workspace.Terrain;
 		const size = CONFIG.town.BASEPLATE_SIZE;
-		createPart({
-			size: new Vector3(size, 1, size),
-			position: new Vector3(0, -0.5, 0), // top surface at y = 0
-			color: COLOR.grass,
-			material: Enum.Material.Grass,
-			name: "Ground",
-			parent,
-		});
+		const depth = 16;
+		terrain.FillBlock(
+			new CFrame(0, -depth / 2, 0), // centre below ground -> top at y = 0
+			new Vector3(size, depth, size),
+			Enum.Material.Grass,
+		);
+		// 3D grass blades render by default on Grass-material terrain (client graphics
+		// quality permitting) — no extra flag needed in this API version.
 	}
 
 	function buildRoads(parent: Instance): void {
