@@ -20,7 +20,9 @@
 		"evil-robloxia:out/server/services/TownService@TownService": "server/services/TownService@TownService",
 		"evil-robloxia:out/server/services/VehicleService@VehicleService": "server/services/VehicleService@VehicleService",
 		"evil-robloxia:out/shared/network@GlobalEvents": "shared/network@GlobalEvents",
-		"evil-robloxia:out/server/npc/NavAgent@NavAgent": "server/npc/NavAgent@NavAgent"
+		"evil-robloxia:out/server/npc/NavAgent@NavAgent": "server/npc/NavAgent@NavAgent",
+		"evil-robloxia:out/server/npc/StateMachine@StateMachine": "server/npc/StateMachine@StateMachine",
+		"evil-robloxia:out/server/npc/NPCAgent@NPCAgent": "server/npc/NPCAgent@NPCAgent"
 	},
 	"metadata": {}
 }

@@ -12,6 +12,8 @@ import { CONFIG } from "../../shared/config";
  */
 export class NavAgent {
 	private readonly path: Path;
+	/** Bumped on every new moveTo/cancel so stale walk threads abort themselves. */
+	private generation = 0;
 
 	constructor(
 		private readonly humanoid: Humanoid,
@@ -31,13 +33,23 @@ export class NavAgent {
 
 	/** Walk to a world position. Resolves true on arrival, false if pathing failed/stuck. */
 	moveTo(goal: Vector3): Promise<boolean> {
+		const gen = ++this.generation; // supersede any in-progress walk
 		return new Promise<boolean>((resolve) => {
-			task.spawn(() => resolve(this.walk(goal, 0)));
+			task.spawn(() => resolve(this.walk(goal, 0, gen)));
 		});
 	}
 
-	private walk(goal: Vector3, retries: number): boolean {
+	/** Stop the current walk where the NPC stands. */
+	cancel(): void {
+		this.generation++;
+		this.humanoid.MoveTo(this.root.Position);
+	}
+
+	private walk(goal: Vector3, retries: number, gen: number): boolean {
+		if (gen !== this.generation) return false;
+
 		const [computed] = pcall(() => this.path.ComputeAsync(this.root.Position, goal));
+		if (gen !== this.generation) return false;
 		if (!computed || this.path.Status !== Enum.PathStatus.Success) {
 			return false;
 		}
@@ -45,12 +57,14 @@ export class NavAgent {
 		const waypoints = this.path.GetWaypoints();
 		// Skip waypoint[0] — it's the agent's current position.
 		for (let i = 1; i < waypoints.size(); i++) {
+			if (gen !== this.generation) return false; // a newer moveTo took over
 			this.humanoid.MoveTo(waypoints[i].Position);
 			const [reached] = this.humanoid.MoveToFinished.Wait();
+			if (gen !== this.generation) return false;
 			if (!reached) {
 				if (retries < CONFIG.pathfinding.MAX_RETRIES) {
 					task.wait(0.1);
-					return this.walk(goal, retries + 1); // recompute from where we got stuck
+					return this.walk(goal, retries + 1, gen); // recompute from where we got stuck
 				}
 				return false;
 			}
