@@ -40,6 +40,21 @@
       }
     },
 
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Brightness": 2.5,
+        "ExposureCompensation": 0.1,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "GlobalShadows": true,
+        "ShadowSoftness": 0.2,
+        "OutdoorAmbient": [0.28, 0.28, 0.33],
+        "Ambient": [0.16, 0.16, 0.2],
+        "GeographicLatitude": 41.7
+      }
+    },
+
     "SoundService": {
       "$properties": {
         "RespectFilteringEnabled": true

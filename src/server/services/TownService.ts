@@ -14,16 +14,20 @@ import { TownBuilder } from "../town/TownBuilder";
 @Service()
 export class TownService implements OnInit {
 	private readonly nodes = new Map<string, TownNode>();
+	private nightLights: ReadonlyArray<Light> = [];
 
 	onInit() {
-		const { nodes } = TownBuilder.build();
-		for (const node of nodes) {
+		const built = TownBuilder.build();
+		for (const node of built.nodes) {
 			this.nodes.set(node.name, node);
 		}
-		print(`[TownService] built town with ${this.nodes.size()} nodes:`);
-		for (const [name, node] of this.nodes) {
-			print(`  • ${name} (${node.kind}) @ ${node.position}`);
-		}
+		this.nightLights = built.nightLights;
+		print(`[TownService] built town with ${this.nodes.size()} nodes, ${this.nightLights.size()} night lights`);
+	}
+
+	/** Lights that should switch on at night (lamp posts, etc.). */
+	getNightLights(): ReadonlyArray<Light> {
+		return this.nightLights;
 	}
 
 	/** Look up a node by name, e.g. "StoreNode" or "HomeNode_1". */

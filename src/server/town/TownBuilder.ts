@@ -112,7 +112,10 @@ export namespace TownBuilder {
 	 * Construct the whole town. Clears any default Studio Baseplate first so the
 	 * result is identical whether run in Studio or from a `rojo build` place file.
 	 */
-	export function build(): { model: Model; nodes: ReadonlyArray<TownNode> } {
+	/** Lights (lamp posts, etc.) that LightingService switches on at night. */
+	export const nightLights = new Array<Light>();
+
+	export function build(): { model: Model; nodes: ReadonlyArray<TownNode>; nightLights: ReadonlyArray<Light> } {
 		// Reproducibility: drop Studio's stock baseplate + any prior terrain/town.
 		Workspace.FindFirstChild("Baseplate")?.Destroy();
 		Workspace.FindFirstChild("Town")?.Destroy();
@@ -148,7 +151,7 @@ export namespace TownBuilder {
 		// Drop a visible marker at every node.
 		for (const node of nodes) createNodeMarker(node, nodesFolder);
 
-		return { model: town, nodes };
+		return { model: town, nodes, nightLights };
 	}
 
 	// ── pieces ────────────────────────────────────────────────────────────────
