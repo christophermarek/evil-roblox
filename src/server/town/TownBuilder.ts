@@ -105,18 +105,41 @@ export namespace TownBuilder {
 		buildGround();
 		buildRoads(town);
 
-		// South side, road-connected via driveways / the connector road:
-		//   Store (west) — Park (centre, on the connector) — School (east).
+		// South side, road-connected via driveways / the connector road. West→East:
+		//   Bank — Store — Park(centre) — School — Cafe.
+		buildShell(
+			new Vector3(-140, 0, -46),
+			46,
+			32,
+			20,
+			Color3.fromRGB(150, 150, 158),
+			Color3.fromRGB(86, 88, 96),
+			Enum.Material.Concrete,
+			12,
+			"Bank",
+			Color3.fromRGB(40, 90, 64),
+			town,
+		);
 		nodes.push(buildStore(new Vector3(-55, 0, -45), town));
 		nodes.push(buildSchool(new Vector3(55, 0, -45), town));
+		buildShell(
+			new Vector3(145, 0, -44),
+			36,
+			26,
+			14,
+			Color3.fromRGB(196, 152, 110),
+			Color3.fromRGB(120, 78, 66),
+			Enum.Material.WoodPlanks,
+			10,
+			"Cafe",
+			Color3.fromRGB(150, 70, 40),
+			town,
+		);
 		nodes.push(buildPark(town));
 
 		// Houses: a row north of the road, doors facing -Z (toward the road).
-		const count = CONFIG.town.HOUSE_COUNT;
-		const startX = -((count - 1) * 50) / 2; // centre the row on X
-		for (let i = 0; i < count; i++) {
-			const center = new Vector3(startX + i * 50, 0, 45);
-			nodes.push(buildHouse(center, i + 1, town));
+		for (let i = 0; i < CONFIG.town.HOUSE_COUNT; i++) {
+			nodes.push(buildHouse(houseCenter(i), i + 1, town));
 		}
 
 		addRoadMarkings(town);
@@ -126,6 +149,105 @@ export namespace TownBuilder {
 		for (const node of nodes) createNodeMarker(node, nodesFolder);
 
 		return { model: town, nodes, nightLights };
+	}
+
+	/** Center of house `i` (0-based) in the north residential row — the one source of truth
+	 *  for house positions, shared by build() and decorateStreets so they never desync. */
+	function houseCenter(i: number): Vector3 {
+		const { HOUSE_COUNT, HOUSE_SPACING, HOUSE_ROW_Z } = CONFIG.town;
+		const startX = -((HOUSE_COUNT - 1) * HOUSE_SPACING) / 2;
+		return new Vector3(startX + i * HOUSE_SPACING, 0, HOUSE_ROW_Z);
+	}
+
+	/** Generic rectangular building shell (used for landmark buildings without AI nodes). */
+	function buildShell(
+		center: Vector3,
+		w: number,
+		d: number,
+		h: number,
+		wallColor: Color3,
+		roofColor: Color3,
+		wallMaterial: Enum.Material,
+		doorGap: number,
+		name: string,
+		signColor: Color3 | undefined,
+		parent: Instance,
+	): void {
+		const model = new Instance("Model");
+		model.Name = name;
+		model.Parent = parent;
+
+		clearGrass(center.X, center.Z, w, d);
+		const doorZ = center.Z + d / 2; // south-row buildings: door faces +Z (the road)
+		const roadEdge = -ROAD_WIDTH / 2;
+		pavement(
+			new Vector3(center.X, ROAD_Y, (doorZ + roadEdge) / 2),
+			new Vector2(12, roadEdge - doorZ),
+			COLOR.sidewalk,
+			`${name}Walk`,
+			model,
+		);
+
+		createPart({
+			size: new Vector3(w, 0.4, d),
+			position: center.add(new Vector3(0, 0.2, 0)),
+			color: COLOR.sidewalk,
+			material: Enum.Material.Concrete,
+			name: "Floor",
+			parent: model,
+		});
+		createPart({
+			size: new Vector3(w, h, 1),
+			position: center.add(new Vector3(0, h / 2 + 0.4, -d / 2)),
+			color: wallColor,
+			material: wallMaterial,
+			name: "WallBack",
+			parent: model,
+		});
+		for (const dx of [-1, 1]) {
+			createPart({
+				size: new Vector3(1, h, d),
+				position: center.add(new Vector3(dx * (w / 2), h / 2 + 0.4, 0)),
+				color: wallColor,
+				material: wallMaterial,
+				name: "WallSide",
+				parent: model,
+			});
+		}
+		const sideW = (w - doorGap) / 2;
+		for (const dx of [-1, 1]) {
+			createPart({
+				size: new Vector3(sideW, h, 1),
+				position: center.add(new Vector3(dx * (doorGap / 2 + sideW / 2), h / 2 + 0.4, d / 2)),
+				color: wallColor,
+				material: wallMaterial,
+				name: "WallFront",
+				parent: model,
+			});
+		}
+		createPart({
+			size: new Vector3(w + 2, 1, d + 2),
+			position: center.add(new Vector3(0, h + 0.4, 0)),
+			color: roofColor,
+			name: "Roof",
+			parent: model,
+		});
+		if (signColor !== undefined) {
+			createPart({
+				size: new Vector3(w * 0.6, 4, 0.5),
+				position: center.add(new Vector3(0, h - 1, d / 2 + 0.6)),
+				color: signColor,
+				material: Enum.Material.Neon,
+				canCollide: false,
+				name: "Sign",
+				parent: model,
+			});
+		}
+		addBuildingDetail(model, center, w, h, d, doorGap, {
+			windows: true,
+			awning: signColor !== undefined,
+			chimney: false,
+		});
 	}
 
 	// ── pieces ────────────────────────────────────────────────────────────────
@@ -157,7 +279,7 @@ export namespace TownBuilder {
 		roads.Name = "Roads";
 		roads.Parent = parent;
 
-		const roadLen = 280;
+		const roadLen = 460;
 
 		// Main east–west road along X at z = 0, with sidewalks flanking it.
 		pavement(new Vector3(0, ROAD_Y, 0), new Vector2(roadLen, ROAD_WIDTH), COLOR.road, "MainRoad", roads);
@@ -602,15 +724,20 @@ export namespace TownBuilder {
 		folder.Name = "StreetDetail";
 		folder.Parent = parent;
 
+		// House X positions derived from the single source of truth (no desync at any count).
+		const houseXs: Array<number> = [];
+		for (let i = 0; i < CONFIG.town.HOUSE_COUNT; i++) houseXs.push(houseCenter(i).X);
+		const span = math.ceil((CONFIG.town.HOUSE_COUNT - 1) * CONFIG.town.HOUSE_SPACING * 0.5) + 30;
+
 		// Lamp posts down both sides of the main road (registered as night-lights).
-		for (let x = -120; x <= 120; x += 40) {
+		for (let x = -span; x <= span; x += 40) {
 			for (const z of [-20.5, 20.5]) {
 				nightLights.push(Props.lampPost(new Vector3(x, 0, z), folder));
 			}
 		}
 
 		// One mailbox + a bush + a flower bed at each house.
-		for (const hx of [-75, -25, 25, 75]) {
+		for (const hx of houseXs) {
 			Props.mailbox(new Vector3(hx - 6, 0, 21), folder);
 			Props.bush(new Vector3(hx + 9, 0, 36), folder);
 			Props.flowerBed(new Vector3(hx, 0, 33), 12, 2.5, folder);
@@ -638,28 +765,31 @@ export namespace TownBuilder {
 		for (const bx of [-72, -38]) Props.bush(new Vector3(bx, 0, -31), folder);
 		for (const bx of [38, 72]) Props.bush(new Vector3(bx, 0, -30), folder);
 
-		// Parked cars: a few at the curb (north side) + one in each house driveway... ish.
+		// Parked cars at the curb (on the road edge, z = ±9, NOT on the sidewalk).
 		const carColors = [
 			Color3.fromRGB(180, 60, 55),
 			Color3.fromRGB(50, 80, 150),
 			Color3.fromRGB(60, 60, 66),
 			Color3.fromRGB(210, 200, 190),
 		];
-		Props.car(new Vector3(-95, 0, 14.5), carColors[0], folder);
-		Props.car(new Vector3(-5, 0, 14.5), carColors[1], folder);
-		Props.car(new Vector3(95, 0, -14.5), carColors[2], folder);
-		Props.car(new Vector3(30, 0, 14.5), carColors[3], folder);
+		Props.car(new Vector3(-170, 0, 9), carColors[0], folder);
+		Props.car(new Vector3(-95, 0, -9), carColors[1], folder);
+		Props.car(new Vector3(-15, 0, 9), carColors[2], folder);
+		Props.car(new Vector3(75, 0, -9), carColors[3], folder);
+		Props.car(new Vector3(150, 0, 9), carColors[1], folder);
+		Props.car(new Vector3(190, 0, -9), carColors[0], folder);
 
-		// Power poles + wires running along the far north verge.
+		// Power poles + wires running along the far north verge, spanning the town width.
 		const poleZ = 26;
-		const poleXs = [-120, -60, 0, 60, 120];
+		const poleXs: Array<number> = [];
+		for (let x = -span; x <= span; x += 65) poleXs.push(x);
 		for (const px of poleXs) Props.powerPole(new Vector3(px, 0, poleZ), folder);
 		for (let i = 0; i < poleXs.size() - 1; i++) {
 			Props.wire(new Vector3(poleXs[i], 23, poleZ), new Vector3(poleXs[i + 1], 23, poleZ), folder);
 		}
 
 		// Low picket fences framing each front yard (gap left for the driveway).
-		for (const hx of [-75, -25, 25, 75]) {
+		for (const hx of houseXs) {
 			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 5, 0, 24), folder);
 			Props.fenceRun(new Vector3(hx + 5, 0, 24), new Vector3(hx + 12, 0, 24), folder);
 			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 12, 0, 34), folder);

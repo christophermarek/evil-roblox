@@ -35,7 +35,7 @@ export const CONFIG = {
 
 	/** Pathfinding agent params (see BUILD_PLAN §A2 — fat radius avoids corner-sticking). */
 	pathfinding: {
-		AGENT_RADIUS: 2, // NPC is 2 wide; fits the 8-stud sidewalks/driveways with margin
+		AGENT_RADIUS: 2.5, // wall clearance to stop corner-clipping; still fits 8-stud paths
 		AGENT_HEIGHT: 5,
 		AGENT_CAN_JUMP: false,
 		/** Coarser spacing => fewer waypoints/MoveTo round-trips per leg (cheaper at scale). */
@@ -52,10 +52,14 @@ export const CONFIG = {
 		GRASS_COST: 20,
 	},
 
-	/** Town layout knobs (consumed by TownBuilder in M1). */
+	/** Town layout knobs (consumed by TownBuilder). */
 	town: {
-		BASEPLATE_SIZE: 512,
-		HOUSE_COUNT: 4,
+		BASEPLATE_SIZE: 1024,
+		HOUSE_COUNT: 8,
+		/** Stud spacing between adjacent houses in a row. */
+		HOUSE_SPACING: 50,
+		/** Z of the (north) residential row centers. */
+		HOUSE_ROW_Z: 45,
 	},
 } as const;
 

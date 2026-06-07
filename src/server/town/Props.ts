@@ -327,25 +327,27 @@ export namespace Props {
 			const px = alongX ? from.X + (to.X - from.X) * f : from.X;
 			const pz = alongX ? from.Z : from.Z + (to.Z - from.Z) * f;
 			createPart({
-				size: new Vector3(0.3, 4, 0.3),
+				size: new Vector3(0.4, 4, 0.4),
 				position: new Vector3(px, 2, pz),
 				color: railColor,
 				material: Enum.Material.Wood,
-				canCollide: false,
+				// Pickets are solid (close enough together that pathfinding treats the run as
+				// a barrier with AgentRadius 2.5) so NPCs route around, not through, fences.
+				canCollide: true,
 				name: "Picket",
 				parent,
 			});
 		}
 	}
 
-	/** A long hedge box. */
+	/** A long, solid hedge box (a barrier NPCs path around). */
 	export function hedge(center: Vector3, length: number, alongX: boolean, parent: Instance): void {
 		createPart({
 			size: alongX ? new Vector3(length, 3, 2) : new Vector3(2, 3, length),
 			position: center.add(new Vector3(0, 1.5, 0)),
 			color: Color3.fromRGB(60, 110, 55),
 			material: Enum.Material.Grass,
-			canCollide: false,
+			canCollide: true,
 			name: "Hedge",
 			parent,
 		});
