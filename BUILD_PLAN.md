@@ -64,7 +64,7 @@ marked **[Studio]** need a manual look in Roblox Studio (sync via Rojo, press Pl
 
 - [x] **M0.1 git + ignore** — `git init`; `.gitignore` for `out/`, `node_modules/`,
   `*.rbxl`, `*.rbxlx`, `.DS_Store`. First commit. **DoD:** `git status` clean, `out/` ignored.
-- [ ] **M0.2 npm + deps** — `package.json`; install `roblox-ts`, `@flamework/core`,
+- [x] **M0.2 npm + deps** — `package.json`; install `roblox-ts`, `@flamework/core`,
   `@flamework/networking`, `@rbxts/services`, `@rbxts/types`, `rbxts-transformer-flamework`,
   `rojo` (or rely on global). **DoD:** `npm install` succeeds.
 - [ ] **M0.3 tsconfig** — strict mode, JSX=Roact, Flamework transformer plugin, `outDir: out`.
