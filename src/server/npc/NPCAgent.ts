@@ -1,3 +1,4 @@
+import { CONFIG } from "../../shared/config";
 import { NPCState } from "../../shared/enums";
 import { NodeSlot, ScheduleEntry } from "../../shared/types";
 import { NavAgent } from "./NavAgent";
@@ -19,6 +20,8 @@ export class NPCAgent {
 	private settledState: NPCState = NPCState.AtHome;
 	private targetSlot: NodeSlot = "home";
 	private arrived = false;
+	/** Monotonic id of the current commute; stale movement resolutions are ignored. */
+	private commuteId = 0;
 
 	constructor(
 		readonly npcName: string,
@@ -52,14 +55,24 @@ export class NPCAgent {
 
 	private beginCommute(): void {
 		this.arrived = false;
-		this.navAgent
-			.moveTo(this.positionFor(this.targetSlot))
-			.then(() => {
-				this.arrived = true;
-			})
-			.catch(() => {
-				this.arrived = true; // give up gracefully; settle where we are
-			});
+		const id = ++this.commuteId;
+		const target = this.positionFor(this.targetSlot);
+
+		// Stagger the path compute by a small per-commute random delay so a whole rush-hour
+		// wave doesn't ComputeAsync on the same frame. The commuteId guard makes any stale
+		// delayed/in-flight movement (from a superseded phase) a no-op — fixes the race where
+		// an old leg's resolution would flip `arrived` true mid-walk on the new leg.
+		task.delay(math.random() * CONFIG.npc.COMMUTE_STAGGER_MAX, () => {
+			if (id !== this.commuteId) return; // superseded during the stagger delay
+			this.navAgent
+				.moveTo(target)
+				.then(() => {
+					if (id === this.commuteId) this.arrived = true;
+				})
+				.catch(() => {
+					if (id === this.commuteId) this.arrived = true; // settle gracefully
+				});
+		});
 	}
 
 	private registerStates(): void {

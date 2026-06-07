@@ -24,8 +24,11 @@ export const CONFIG = {
 		WALK_SPEED: 12,
 		/** Seconds between FSM ticks. Per BUILD_PLAN §A2 we tick ~0.2s, not per-frame. */
 		TICK_INTERVAL: 0.2,
-		/** Random jitter (sec) added per-NPC so path computes don't all fire at once. */
-		TICK_JITTER: 0.15,
+		/**
+		 * Max seconds a commute's path-compute is randomly delayed, so a rush-hour wave
+		 * (many NPCs changing phase on the same hour) doesn't ComputeAsync on one frame.
+		 */
+		COMMUTE_STAGGER_MAX: 1.5,
 		/** How close (studs) counts as "arrived" at a node. */
 		ARRIVAL_RADIUS: 4,
 	},
@@ -35,7 +38,8 @@ export const CONFIG = {
 		AGENT_RADIUS: 2, // NPC is 2 wide; fits the 8-stud sidewalks/driveways with margin
 		AGENT_HEIGHT: 5,
 		AGENT_CAN_JUMP: false,
-		WAYPOINT_SPACING: 4,
+		/** Coarser spacing => fewer waypoints/MoveTo round-trips per leg (cheaper at scale). */
+		WAYPOINT_SPACING: 8,
 		/** Seconds before a stuck NPC recomputes its path. */
 		STUCK_TIMEOUT: 2,
 		/** How many times a NavAgent retries (recompute) a blocked/failed leg before giving up. */

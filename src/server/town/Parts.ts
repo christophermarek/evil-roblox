@@ -13,6 +13,7 @@ export interface PartProps {
 	reflectance?: number;
 	shape?: Enum.PartType;
 	cframe?: CFrame; // if set, overrides position (for rotated parts)
+	castShadow?: boolean;
 	name?: string;
 }
 
@@ -33,6 +34,10 @@ export function createPart(props: PartProps): Part {
 	part.CanQuery = props.canCollide ?? true;
 	part.Transparency = props.transparency ?? 0;
 	part.Reflectance = props.reflectance ?? 0;
+	// Default: only solid/structural (colliding) parts cast shadows. Hundreds of small
+	// decorative non-colliding props (dashes, flowers, wires, pickets, windows) would
+	// otherwise each add real-time shadow-map cost for ~no visual gain.
+	part.CastShadow = props.castShadow ?? (props.canCollide ?? true);
 	if (props.shape !== undefined) part.Shape = props.shape;
 	part.TopSurface = Enum.SurfaceType.Smooth;
 	part.BottomSurface = Enum.SurfaceType.Smooth;

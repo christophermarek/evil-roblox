@@ -23,9 +23,18 @@ export class TimeService implements OnStart {
 				`${string.format("%02d:00", CONFIG.time.START_HOUR)}`,
 		);
 
+		// Advance the clock every frame (cheap), but only push the replicated
+		// Lighting.ClockTime a few times a second — per-frame writes are wasted work.
+		let writeAccumulator = 0;
+		Lighting.ClockTime = this.timeOfDay;
 		RunService.Heartbeat.Connect((dt) => {
 			this.timeOfDay = (this.timeOfDay + dt * hoursPerSecond) % 24;
-			Lighting.ClockTime = this.timeOfDay;
+
+			writeAccumulator += dt;
+			if (writeAccumulator >= 0.2) {
+				writeAccumulator = 0;
+				Lighting.ClockTime = this.timeOfDay;
+			}
 
 			const hour = math.floor(this.timeOfDay);
 			if (hour !== this.lastLoggedHour) {
