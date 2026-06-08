@@ -309,8 +309,10 @@ export namespace TownBuilder {
 			new Vector3(size, depth, size),
 			Enum.Material.Grass,
 		);
-		// 3D grass blades render by default on Grass-material terrain (client graphics
-		// quality permitting) — no extra flag needed in this API version.
+		// Turn OFF the 3D grass-blade decoration — it renders too tall and there's no
+		// script-side height control, so flat Grass material reads much cleaner.
+		// (Terrain.Decoration is a real engine property; @rbxts/types just lacks it here.)
+		(terrain as unknown as { Decoration: boolean }).Decoration = false;
 	}
 
 	const ROAD_WIDTH = 24;
