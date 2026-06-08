@@ -1,107 +1,157 @@
 import { OnStart, Service } from "@flamework/core";
-import { InsertService, Workspace } from "@rbxts/services";
+import { InsertService, ReplicatedStorage, Workspace } from "@rbxts/services";
 
-/** The user's uploaded tree pack (https://create.roblox.com/store/asset/99681671190153). */
+/** Fallback only — used if ReplicatedStorage.TreePack isn't present. */
 const TREE_PACK_ASSET_ID = 99681671190153;
 
-/** How many trees to scatter in the background forest ring. */
-const TREE_COUNT = 240;
+/** Name of the model you drop into ReplicatedStorage (preferred source of trees). */
+const TREE_PACK_NAME = "TreePack";
+/** Name of the Workspace folder of zone Parts that mark where the forest goes. */
+const ZONES_FOLDER_NAME = "ForestZones";
 
-// Keep this rectangle (the town play area) clear of trees.
-const CLEAR_X_HALF = 240;
-const CLEAR_Z_MIN = -115;
-const CLEAR_Z_MAX = 100;
-/** Trees scatter out to here (kept inside the grass terrain footprint). */
-const MAP_HALF = 480;
+/** Roughly one tree per this many square studs of zone area. */
+const STUDS_PER_TREE = 220;
+const MAX_TREES_PER_ZONE = 500;
 
 /**
- * Loads the tree-pack asset, finds the individual tree templates inside it, and plants a
- * dense background forest around the town to sell a "town in the woods" look. Runs after the
- * town is built (TownService builds in OnInit; this is OnStart).
+ * Plants a background forest from the user's tree pack.
+ *
+ * Placement is driven by Studio: put a `TreePack` model in ReplicatedStorage and a
+ * `ForestZones` folder of Parts in Workspace, and trees are scattered ONLY on top of those
+ * zone parts (so they never collide with the town). Each zone's tree count scales with its
+ * area; trees get random rotation + scale and are anchored / non-colliding.
  */
 @Service()
 export class ForestService implements OnStart {
 	onStart() {
-		const templates = this.loadTreeTemplates();
+		const templates = this.findTemplates();
 		if (templates.size() === 0) {
-			warn("[ForestService] no tree templates found in the pack — skipping forest");
+			warn(`[ForestService] no trees found. Put your pack in ReplicatedStorage as "${TREE_PACK_NAME}".`);
 			return;
 		}
-		print(`[ForestService] loaded ${templates.size()} tree template(s); planting forest...`);
-		this.plantForest(templates);
+
+		const zones = this.findZones();
+		if (zones.size() === 0) {
+			warn(`[ForestService] no "${ZONES_FOLDER_NAME}" folder of Parts in Workspace — nothing planted.`);
+			print(`[ForestService] (Add a Workspace folder "${ZONES_FOLDER_NAME}" with Parts marking forest areas.)`);
+			return;
+		}
+
+		print(`[ForestService] ${templates.size()} tree template(s), ${zones.size()} zone(s) — planting...`);
+		this.plant(templates, zones);
 	}
 
-	/** Load the pack and collect every tree (Model or MeshPart), descending through folders. */
-	private loadTreeTemplates(): Array<Model | BasePart> {
+	/** Prefer a hand-placed ReplicatedStorage.TreePack; fall back to LoadAsset. */
+	private findTemplates(): Array<Model | BasePart> {
+		const packInRS = ReplicatedStorage.FindFirstChild(TREE_PACK_NAME);
+		if (packInRS !== undefined) {
+			const found = new Array<Model | BasePart>();
+			collectTemplates(packInRS, found);
+			print(`[ForestService] using ReplicatedStorage.${TREE_PACK_NAME}`);
+			return found;
+		}
+
 		const [ok, result] = pcall(() => InsertService.LoadAsset(TREE_PACK_ASSET_ID));
 		if (!ok) {
-			warn(`[ForestService] LoadAsset(${TREE_PACK_ASSET_ID}) failed: ${result}`);
+			warn(`[ForestService] LoadAsset fallback failed: ${result}`);
 			return [];
 		}
-		return collectTemplates(result as Instance);
+		const found = new Array<Model | BasePart>();
+		collectTemplates(result as Instance, found);
+		return found;
 	}
 
-	private plantForest(templates: Array<Model | BasePart>): void {
+	private findZones(): Array<BasePart> {
+		const folder = Workspace.FindFirstChild(ZONES_FOLDER_NAME);
+		if (folder === undefined) return [];
+		const zones = new Array<BasePart>();
+		for (const child of folder.GetChildren()) {
+			if (child.IsA("BasePart")) zones.push(child);
+		}
+		return zones;
+	}
+
+	private plant(templates: Array<Model | BasePart>, zones: Array<BasePart>): void {
 		const forest = new Instance("Folder");
 		forest.Name = "Forest";
 		forest.Parent = Workspace;
 
-		let planted = 0;
-		let attempts = 0;
-		const maxAttempts = TREE_COUNT * 6;
-		while (planted < TREE_COUNT && attempts < maxAttempts) {
-			attempts++;
-			const x = (math.random() - 0.5) * 2 * MAP_HALF;
-			const z = (math.random() - 0.5) * 2 * MAP_HALF;
-			// Skip anything inside the town play area.
-			if (math.abs(x) < CLEAR_X_HALF && z > CLEAR_Z_MIN && z < CLEAR_Z_MAX) continue;
+		let total = 0;
+		for (const zone of zones) {
+			const area = zone.Size.X * zone.Size.Z;
+			const count = math.clamp(math.floor(area / STUDS_PER_TREE), 1, MAX_TREES_PER_ZONE);
+			const topY = zone.Position.Y + zone.Size.Y / 2;
+			const halfX = zone.Size.X / 2;
+			const halfZ = zone.Size.Z / 2;
 
-			const template = templates[math.random(0, templates.size() - 1)];
-			this.plantOne(template, new Vector3(x, 0, z), forest);
-			planted++;
+			for (let i = 0; i < count; i++) {
+				// Random point within the zone's footprint (assumes axis-aligned zones).
+				const x = zone.Position.X + (math.random() - 0.5) * 2 * halfX;
+				const z = zone.Position.Z + (math.random() - 0.5) * 2 * halfZ;
+				const template = templates[math.random(0, templates.size() - 1)];
+				plantOne(template, x, z, topY, forest);
+				total++;
+			}
+
+			// Hide the marker so it doesn't show during play.
+			zone.Transparency = 1;
+			zone.CanCollide = false;
 		}
-		print(`[ForestService] planted ${planted} trees in the background forest`);
+		print(`[ForestService] planted ${total} trees across ${zones.size()} zone(s)`);
 	}
+}
 
-	private plantOne(template: Model | BasePart, pos: Vector3, parent: Instance): void {
-		const clone = template.Clone();
-		const angle = math.random() * math.pi * 2;
-		const scale = 0.8 + math.random() * 0.9; // 0.8–1.7× for natural variety
+function plantOne(template: Model | BasePart, x: number, z: number, groundY: number, parent: Instance): void {
+	const clone = template.Clone();
+	const angle = math.random() * math.pi * 2;
+	const scale = 0.8 + math.random() * 0.9; // 0.8–1.7×
 
-		if (clone.IsA("Model")) {
-			clone.ScaleTo(scale);
-			// Sit the base on the ground (y = 0) regardless of the model's authored origin.
-			const [boxCFrame, boxSize] = clone.GetBoundingBox();
-			const baseToPivot = clone.GetPivot().Position.Y - (boxCFrame.Position.Y - boxSize.Y / 2);
-			clone.PivotTo(new CFrame(pos.X, baseToPivot, pos.Z).mul(CFrame.Angles(0, angle, 0)));
-		} else {
-			clone.Size = clone.Size.mul(scale);
-			clone.CFrame = new CFrame(pos.X, clone.Size.Y / 2, pos.Z).mul(CFrame.Angles(0, angle, 0));
-		}
-
-		// Background scenery: anchored, no collision, no shadow cost.
-		for (const inst of clone.IsA("Model") ? clone.GetDescendants() : [clone]) {
+	if (clone.IsA("Model")) {
+		clone.ScaleTo(scale);
+		const [boxCFrame, boxSize] = clone.GetBoundingBox();
+		const baseToPivot = clone.GetPivot().Position.Y - (boxCFrame.Position.Y - boxSize.Y / 2);
+		clone.PivotTo(new CFrame(x, groundY + baseToPivot, z).mul(CFrame.Angles(0, angle, 0)));
+		for (const inst of clone.GetDescendants()) {
 			if (inst.IsA("BasePart")) {
 				inst.Anchored = true;
 				inst.CanCollide = false;
 				inst.CastShadow = false;
 			}
 		}
-		clone.Parent = parent;
+	} else {
+		clone.Size = clone.Size.mul(scale);
+		clone.CFrame = new CFrame(x, groundY + clone.Size.Y / 2, z).mul(CFrame.Angles(0, angle, 0));
+		clone.Anchored = true;
+		clone.CanCollide = false;
+		clone.CastShadow = false;
 	}
+	clone.Parent = parent;
 }
 
-/** Recursively collect tree templates: whole Models and standalone MeshParts, through folders. */
-function collectTemplates(root: Instance): Array<Model | BasePart> {
-	const out = new Array<Model | BasePart>();
+/**
+ * Collect INDIVIDUAL trees from a pack. A tree is a MeshPart, or a "leaf" Model (one with
+ * parts but no child Models). Groups (Models/Folders containing child Models) are descended
+ * into — so we never clone the whole pack as a single template.
+ */
+function collectTemplates(root: Instance, out: Array<Model | BasePart>): void {
 	for (const child of root.GetChildren()) {
-		if (child.IsA("Model")) {
+		if (child.IsA("MeshPart")) {
 			out.push(child);
-		} else if (child.IsA("MeshPart") || child.IsA("BasePart")) {
-			out.push(child);
-		} else if (child.IsA("Folder") || child.IsA("Configuration")) {
-			for (const nested of collectTemplates(child)) out.push(nested);
+		} else if (child.IsA("Model")) {
+			let hasChildModel = false;
+			for (const c of child.GetChildren()) {
+				if (c.IsA("Model")) {
+					hasChildModel = true;
+					break;
+				}
+			}
+			if (hasChildModel) {
+				collectTemplates(child, out); // a group of trees → descend
+			} else {
+				out.push(child); // a single tree
+			}
+		} else if (child.IsA("Folder")) {
+			collectTemplates(child, out);
 		}
 	}
-	return out;
 }
