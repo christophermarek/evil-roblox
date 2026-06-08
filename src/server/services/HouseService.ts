@@ -153,7 +153,7 @@ function houseFrontDir(house: Model): Vector3 | undefined {
 	for (const inst of house.GetDescendants()) {
 		if (!inst.IsA("BasePart")) continue;
 		const name = string.lower(inst.Name);
-		if (name === "front" || name.find("door")[0] !== undefined) {
+		if (name.find("front")[0] !== undefined || name.find("door")[0] !== undefined) {
 			const dir = new Vector3(inst.Position.X - center.X, 0, inst.Position.Z - center.Z);
 			if (dir.Magnitude > 0.1) return dir.Unit;
 		}
