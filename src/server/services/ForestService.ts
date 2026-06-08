@@ -41,13 +41,13 @@ export class ForestService implements OnStart {
 		this.plant(templates, zones);
 	}
 
-	/** Prefer a hand-placed ReplicatedStorage.TreePack; fall back to LoadAsset. */
+	/** Prefer a hand-placed tree pack in ReplicatedStorage; fall back to LoadAsset. */
 	private findTemplates(): Array<Model | BasePart> {
-		const packInRS = ReplicatedStorage.FindFirstChild(TREE_PACK_NAME);
+		const packInRS = findPackInstance();
 		if (packInRS !== undefined) {
 			const found = new Array<Model | BasePart>();
 			collectTemplates(packInRS, found);
-			print(`[ForestService] using ReplicatedStorage.${TREE_PACK_NAME}`);
+			print(`[ForestService] using ReplicatedStorage.${packInRS.Name}`);
 			return found;
 		}
 
@@ -126,6 +126,16 @@ function plantOne(template: Model | BasePart, x: number, z: number, groundY: num
 		clone.CastShadow = false;
 	}
 	clone.Parent = parent;
+}
+
+/** Find the tree pack in ReplicatedStorage by exact name or any child whose name mentions "tree". */
+function findPackInstance(): Instance | undefined {
+	const exact = ReplicatedStorage.FindFirstChild(TREE_PACK_NAME);
+	if (exact !== undefined) return exact;
+	for (const child of ReplicatedStorage.GetChildren()) {
+		if (string.lower(child.Name).find("tree")[0] !== undefined) return child;
+	}
+	return undefined;
 }
 
 /**
