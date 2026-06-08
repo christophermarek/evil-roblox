@@ -9,8 +9,8 @@ const TREE_PACK_NAME = "TreePack";
 /** Name of the Workspace folder of zone Parts that mark where the forest goes. */
 const ZONES_FOLDER_NAME = "ForestZones";
 
-/** Roughly one tree per this many square studs of zone area. */
-const STUDS_PER_TREE = 220;
+/** Roughly one tree per this many square studs of zone area (higher = sparser). */
+const STUDS_PER_TREE = 420;
 const MAX_TREES_PER_ZONE = 500;
 
 /**
@@ -114,7 +114,7 @@ function plantOne(template: Model | BasePart, x: number, z: number, groundY: num
 		for (const inst of clone.GetDescendants()) {
 			if (inst.IsA("BasePart")) {
 				inst.Anchored = true;
-				inst.CanCollide = false;
+				inst.CanCollide = true; // solid trees — can't walk through them
 				inst.CastShadow = false;
 			}
 		}
@@ -122,7 +122,7 @@ function plantOne(template: Model | BasePart, x: number, z: number, groundY: num
 		clone.Size = clone.Size.mul(scale);
 		clone.CFrame = new CFrame(x, groundY + clone.Size.Y / 2, z).mul(CFrame.Angles(0, angle, 0));
 		clone.Anchored = true;
-		clone.CanCollide = false;
+		clone.CanCollide = true;
 		clone.CastShadow = false;
 	}
 	clone.Parent = parent;
