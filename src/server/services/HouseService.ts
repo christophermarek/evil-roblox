@@ -8,11 +8,11 @@ const ZONES_FOLDER_NAME = "HouseZones";
 /** Child model whose parts get a per-house random colour. */
 const SIDING_MODEL_NAME = "Siding";
 /**
- * Manual fallback: if `house_1` has NO `Front`/`Door` marker part, the code assumes its
- * front is −Z and rotates by this many extra degrees. Set this if all houses face wrong by
- * a fixed amount (e.g. 180 if they're all backwards). Ignored when a marker is present.
+ * Extra yaw (degrees) always added after aligning the house's front to the zone's `front`.
+ * The Front Door marker sits 90° off the door's actual facing, so +90 brings the door to
+ * the front. If houses end up backwards/sideways, change this (90 / -90 / 180).
  */
-const HOUSE_FRONT_YAW_DEG = 0;
+const HOUSE_FRONT_YAW_DEG = 90;
 
 /** Pleasant house-siding colours; each house picks one at random. */
 const SIDING_COLORS: ReadonlyArray<Color3> = [
@@ -91,8 +91,7 @@ export class HouseService implements OnStart {
 		// plus the manual offset. Rotate the house so its front lines up with `desired`.
 		const marker = houseFrontDir(clone);
 		const nativeFront = marker ?? flattenDir(clone.GetPivot().LookVector);
-		let yaw = signedYaw(nativeFront, desired);
-		if (marker === undefined) yaw += math.rad(HOUSE_FRONT_YAW_DEG);
+		const yaw = signedYaw(nativeFront, desired) + math.rad(HOUSE_FRONT_YAW_DEG);
 
 		const pos = new Vector3(base.Position.X, groundY + baseToPivot, base.Position.Z);
 		const worldRot = CFrame.Angles(0, yaw, 0).mul(clone.GetPivot().Rotation);
