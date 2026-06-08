@@ -50,6 +50,12 @@ export const CONFIG = {
 		GRASS_COST: 20,
 	},
 
+	/** Player movement (client-owned). */
+	player: {
+		WALK_SPEED: 16,
+		SPRINT_SPEED: 30,
+	},
+
 	/** Town layout knobs (consumed by TownBuilder). */
 	town: {
 		BASEPLATE_SIZE: 1024,

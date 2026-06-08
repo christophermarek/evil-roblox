@@ -12,6 +12,8 @@ const ZONES_FOLDER_NAME = "ForestZones";
 /** Roughly one tree per this many square studs of zone area (higher = sparser). */
 const STUDS_PER_TREE = 420;
 const MAX_TREES_PER_ZONE = 500;
+/** No two trees spawn closer than this (studs) — stops them clumping/overlapping. */
+const MIN_TREE_SPACING = 18;
 
 /**
  * Plants a background forest from the user's tree pack.
@@ -77,6 +79,7 @@ export class ForestService implements OnStart {
 		forest.Parent = Workspace;
 
 		let total = 0;
+		const spacingSq = MIN_TREE_SPACING * MIN_TREE_SPACING;
 		for (const zone of zones) {
 			const area = zone.Size.X * zone.Size.Z;
 			const count = math.clamp(math.floor(area / STUDS_PER_TREE), 1, MAX_TREES_PER_ZONE);
@@ -84,12 +87,28 @@ export class ForestService implements OnStart {
 			const halfX = zone.Size.X / 2;
 			const halfZ = zone.Size.Z / 2;
 
-			for (let i = 0; i < count; i++) {
+			const placed = new Array<Vector2>();
+			let tries = 0;
+			while (placed.size() < count && tries < count * 12) {
+				tries++;
 				// Random point within the zone's footprint (assumes axis-aligned zones).
 				const x = zone.Position.X + (math.random() - 0.5) * 2 * halfX;
 				const z = zone.Position.Z + (math.random() - 0.5) * 2 * halfZ;
-				const template = templates[math.random(0, templates.size() - 1)];
-				plantOne(template, x, z, topY, forest);
+
+				// Reject if it would clump on top of an already-placed tree.
+				let tooClose = false;
+				for (const p of placed) {
+					const dx = x - p.X;
+					const dz = z - p.Y;
+					if (dx * dx + dz * dz < spacingSq) {
+						tooClose = true;
+						break;
+					}
+				}
+				if (tooClose) continue;
+
+				placed.push(new Vector2(x, z));
+				plantOne(templates[math.random(0, templates.size() - 1)], x, z, topY, forest);
 				total++;
 			}
 
