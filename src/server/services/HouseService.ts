@@ -7,6 +7,12 @@ const HOUSE_MODEL_NAME = "house_1";
 const ZONES_FOLDER_NAME = "HouseZones";
 /** Child model whose parts get a per-house random colour. */
 const SIDING_MODEL_NAME = "Siding";
+/**
+ * Manual fallback: if `house_1` has NO `Front`/`Door` marker part, the code assumes its
+ * front is −Z and rotates by this many extra degrees. Set this if all houses face wrong by
+ * a fixed amount (e.g. 180 if they're all backwards). Ignored when a marker is present.
+ */
+const HOUSE_FRONT_YAW_DEG = 0;
 
 /** Pleasant house-siding colours; each house picks one at random. */
 const SIDING_COLORS: ReadonlyArray<Color3> = [
@@ -77,11 +83,20 @@ export class HouseService implements OnStart {
 		const baseToPivot = clone.GetPivot().Position.Y - (boxCFrame.Position.Y - boxSize.Y / 2);
 		const groundY = base.Position.Y + base.Size.Y / 2;
 
-		// Orient: the house's front (-Z / LookVector) points from the baseplate toward `front`.
+		// Desired world facing: from the baseplate toward the zone's `front` part.
 		const toFront = new Vector3(front.Position.X - base.Position.X, 0, front.Position.Z - base.Position.Z);
-		const dir = toFront.Magnitude > 0.05 ? toFront.Unit : new Vector3(0, 0, -1);
+		const desired = toFront.Magnitude > 0.05 ? toFront.Unit : new Vector3(0, 0, -1);
+
+		// The house's OWN front: from a Front/Door marker inside it (precise), else assume -Z
+		// plus the manual offset. Rotate the house so its front lines up with `desired`.
+		const marker = houseFrontDir(clone);
+		const nativeFront = marker ?? flattenDir(clone.GetPivot().LookVector);
+		let yaw = signedYaw(nativeFront, desired);
+		if (marker === undefined) yaw += math.rad(HOUSE_FRONT_YAW_DEG);
+
 		const pos = new Vector3(base.Position.X, groundY + baseToPivot, base.Position.Z);
-		clone.PivotTo(CFrame.lookAt(pos, pos.add(dir)));
+		const worldRot = CFrame.Angles(0, yaw, 0).mul(clone.GetPivot().Rotation);
+		clone.PivotTo(new CFrame(pos).mul(worldRot));
 
 		for (const inst of clone.GetDescendants()) {
 			if (inst.IsA("BasePart")) inst.Anchored = true; // keep authored collisions; just anchor
@@ -116,6 +131,34 @@ export class HouseService implements OnStart {
 		}
 		return zones;
 	}
+}
+
+/** Project a direction onto the horizontal plane (returns a unit vector, or -Z if degenerate). */
+function flattenDir(v: Vector3): Vector3 {
+	const flat = new Vector3(v.X, 0, v.Z);
+	return flat.Magnitude > 1e-3 ? flat.Unit : new Vector3(0, 0, -1);
+}
+
+/** Signed yaw (radians, about +Y) that rotates direction `from` onto direction `to`. */
+function signedYaw(from: Vector3, to: Vector3): number {
+	const a = flattenDir(from);
+	const b = flattenDir(to);
+	return math.atan2(a.Cross(b).Y, a.Dot(b));
+}
+
+/** The house's own front direction, from a `Front`/`Door` marker part relative to its centre. */
+function houseFrontDir(house: Model): Vector3 | undefined {
+	const [boxCFrame] = house.GetBoundingBox();
+	const center = boxCFrame.Position;
+	for (const inst of house.GetDescendants()) {
+		if (!inst.IsA("BasePart")) continue;
+		const name = string.lower(inst.Name);
+		if (name === "front" || name.find("door")[0] !== undefined) {
+			const dir = new Vector3(inst.Position.X - center.X, 0, inst.Position.Z - center.Z);
+			if (dir.Magnitude > 0.1) return dir.Unit;
+		}
+	}
+	return undefined;
 }
 
 /** Give a house a random siding colour: every BasePart inside its `Siding` model. */
