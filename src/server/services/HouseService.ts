@@ -12,7 +12,7 @@ const SIDING_MODEL_NAME = "Siding";
  * The Front Door marker sits 90° off the door's actual facing, so +90 brings the door to
  * the front. If houses end up backwards/sideways, change this (90 / -90 / 180).
  */
-const HOUSE_FRONT_YAW_DEG = 90;
+const HOUSE_FRONT_YAW_DEG = -90;
 
 /** Pleasant house-siding colours; each house picks one at random. */
 const SIDING_COLORS: ReadonlyArray<Color3> = [
