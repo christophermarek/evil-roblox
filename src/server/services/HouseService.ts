@@ -5,6 +5,22 @@ import { ReplicatedStorage, Workspace } from "@rbxts/services";
 const HOUSE_MODEL_NAME = "house_1";
 /** Workspace folder of house-zone Models, each with a `baseplate` part + a `front` part. */
 const ZONES_FOLDER_NAME = "HouseZones";
+/** Child model whose parts get a per-house random colour. */
+const SIDING_MODEL_NAME = "Siding";
+
+/** Pleasant house-siding colours; each house picks one at random. */
+const SIDING_COLORS: ReadonlyArray<Color3> = [
+	Color3.fromRGB(228, 228, 220), // white
+	Color3.fromRGB(210, 196, 160), // beige
+	Color3.fromRGB(150, 180, 200), // light blue
+	Color3.fromRGB(150, 175, 140), // sage green
+	Color3.fromRGB(226, 202, 120), // pale yellow
+	Color3.fromRGB(170, 170, 176), // gray
+	Color3.fromRGB(176, 92, 80), // barn red
+	Color3.fromRGB(190, 150, 120), // tan
+	Color3.fromRGB(120, 150, 172), // steel blue
+	Color3.fromRGB(176, 132, 170), // dusty mauve
+];
 
 /**
  * Places your custom house model at hand-authored zones. Each zone is a Model in
@@ -49,6 +65,7 @@ export class HouseService implements OnStart {
 		}
 
 		const clone = template.Clone();
+		recolorSiding(clone);
 
 		// Uniform scale so the house fits the baseplate footprint without distortion.
 		const [, naturalSize] = clone.GetBoundingBox();
@@ -98,6 +115,16 @@ export class HouseService implements OnStart {
 			if (child.IsA("Model")) zones.push(child);
 		}
 		return zones;
+	}
+}
+
+/** Give a house a random siding colour: every BasePart inside its `Siding` model. */
+function recolorSiding(house: Model): void {
+	const siding = house.FindFirstChild(SIDING_MODEL_NAME);
+	if (siding === undefined) return;
+	const color = SIDING_COLORS[math.random(0, SIDING_COLORS.size() - 1)];
+	for (const inst of siding.GetDescendants()) {
+		if (inst.IsA("BasePart")) inst.Color = color;
 	}
 }
 
