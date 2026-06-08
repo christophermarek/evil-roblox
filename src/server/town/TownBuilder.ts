@@ -54,9 +54,13 @@ const HOUSE_PALETTES: ReadonlyArray<{ wall: Color3; roof: Color3 }> = [
  */
 function clearGrass(centerX: number, centerZ: number, sizeX: number, sizeZ: number): void {
 	const depth = 16;
+	// Pad by ~a voxel each side: terrain fills on a 4-stud grid, so without padding the edge
+	// voxels stay partly Grass and blades poke through road/building edges. The small concrete
+	// margin sits hidden under the part edges (reads as a foundation apron, not a bug).
+	const pad = 4;
 	Workspace.Terrain.FillBlock(
 		new CFrame(centerX, -depth / 2, centerZ),
-		new Vector3(sizeX, depth, sizeZ),
+		new Vector3(sizeX + pad, depth, sizeZ + pad),
 		Enum.Material.Concrete,
 	);
 }
@@ -309,10 +313,6 @@ export namespace TownBuilder {
 			new Vector3(size, depth, size),
 			Enum.Material.Grass,
 		);
-		// Turn OFF the 3D grass-blade decoration — it renders too tall and there's no
-		// script-side height control, so flat Grass material reads much cleaner.
-		// (Terrain.Decoration is a real engine property; @rbxts/types just lacks it here.)
-		(terrain as unknown as { Decoration: boolean }).Decoration = false;
 	}
 
 	const ROAD_WIDTH = 24;
