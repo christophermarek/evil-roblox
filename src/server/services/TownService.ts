@@ -30,6 +30,20 @@ export class TownService implements OnInit {
 		return this.nightLights;
 	}
 
+	/** Add a node from another system (e.g. HouseService registers custom-house homes). */
+	registerNode(node: TownNode): void {
+		this.nodes.set(node.name, node);
+	}
+
+	/** Number of homes (interior Home nodes) — drives how many NPCs spawn. */
+	getHomeCount(): number {
+		let count = 0;
+		for (const [, node] of this.nodes) {
+			if (node.kind === NodeKind.Home && node.spot !== "entrance") count++;
+		}
+		return count;
+	}
+
 	/** Look up a node by name, e.g. "StoreNode" or "HomeNode_1". */
 	getNode(name: string): TownNode | undefined {
 		return this.nodes.get(name);

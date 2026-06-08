@@ -161,10 +161,8 @@ export namespace TownBuilder {
 		);
 		addNodes(buildPark(town));
 
-		// Houses: a row north of the road, doors facing -Z (toward the road).
-		for (let i = 0; i < CONFIG.town.HOUSE_COUNT; i++) {
-			addNodes(buildHouse(houseCenter(i), i + 1, town));
-		}
+		// Homes are now custom models placed by HouseService at HouseZones (it registers the
+		// HomeNode/HomeEntrance nodes). The old procedural houses are retired.
 
 		addRoadMarkings(town);
 		decorateStreets(town);
@@ -810,9 +808,7 @@ export namespace TownBuilder {
 		folder.Name = "StreetDetail";
 		folder.Parent = parent;
 
-		// House X positions derived from the single source of truth (no desync at any count).
-		const houseXs: Array<number> = [];
-		for (let i = 0; i < CONFIG.town.HOUSE_COUNT; i++) houseXs.push(houseCenter(i).X);
+		// Lamp/pole extent across the town width.
 		const span = math.ceil((CONFIG.town.HOUSE_COUNT - 1) * CONFIG.town.HOUSE_SPACING * 0.5) + 30;
 
 		// Lamp posts down both sides of the main road (registered as night-lights).
@@ -820,13 +816,6 @@ export namespace TownBuilder {
 			for (const z of [-20.5, 20.5]) {
 				nightLights.push(Props.lampPost(new Vector3(x, 0, z), folder));
 			}
-		}
-
-		// One mailbox + a bush + a flower bed at each house.
-		for (const hx of houseXs) {
-			Props.mailbox(new Vector3(hx - 6, 0, 21), folder);
-			Props.bush(new Vector3(hx + 9, 0, 36), folder);
-			Props.flowerBed(new Vector3(hx, 0, 33), 12, 2.5, folder);
 		}
 
 		// Bins + hydrants along the sidewalks.
@@ -874,12 +863,5 @@ export namespace TownBuilder {
 			Props.wire(new Vector3(poleXs[i], 23, poleZ), new Vector3(poleXs[i + 1], 23, poleZ), folder);
 		}
 
-		// Low picket fences framing each front yard (gap left for the driveway).
-		for (const hx of houseXs) {
-			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 5, 0, 24), folder);
-			Props.fenceRun(new Vector3(hx + 5, 0, 24), new Vector3(hx + 12, 0, 24), folder);
-			Props.fenceRun(new Vector3(hx - 12, 0, 24), new Vector3(hx - 12, 0, 34), folder);
-			Props.fenceRun(new Vector3(hx + 12, 0, 24), new Vector3(hx + 12, 0, 34), folder);
-		}
 	}
 }

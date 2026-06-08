@@ -1,5 +1,7 @@
-import { OnStart, Service } from "@flamework/core";
+import { OnInit, Service } from "@flamework/core";
 import { ReplicatedStorage, Workspace } from "@rbxts/services";
+import { NodeKind } from "../../shared/enums";
+import { TownService } from "./TownService";
 
 /** The house model you place (in ReplicatedStorage, like the tree pack). */
 const HOUSE_MODEL_NAME = "house_1";
@@ -37,9 +39,16 @@ const SIDING_COLORS: ReadonlyArray<Color3> = [
  * The house is uniformly scaled to fit the baseplate (so the baseplate is a true WYSIWYG
  * guide), undistorted, base on the baseplate, oriented toward `front`.
  */
+/**
+ * Runs in OnInit (before NPCService spawns) so the homes it registers are part of the node
+ * graph in time. Each placed house registers a HomeNode (NPC spawn/home, just outside the
+ * front door) + a HomeEntrance node (at the door) so NPCs live in and walk out of your houses.
+ */
 @Service()
-export class HouseService implements OnStart {
-	onStart() {
+export class HouseService implements OnInit {
+	constructor(private readonly townService: TownService) {}
+
+	onInit() {
 		const template = this.findHouse();
 		if (template === undefined) {
 			warn(`[HouseService] no "${HOUSE_MODEL_NAME}" model found in ReplicatedStorage/Workspace.`);
@@ -58,12 +67,12 @@ export class HouseService implements OnStart {
 		housesFolder.Parent = Workspace;
 
 		for (const zone of zones) {
-			if (this.placeOne(template, zone, housesFolder)) placed++;
+			if (this.placeOne(template, zone, housesFolder, placed + 1)) placed++;
 		}
-		print(`[HouseService] placed ${placed}/${zones.size()} house(s) from ${template.Name}`);
+		print(`[HouseService] placed ${placed}/${zones.size()} house(s) as homes`);
 	}
 
-	private placeOne(template: Model, zone: Model, parent: Instance): boolean {
+	private placeOne(template: Model, zone: Model, parent: Instance, homeIndex: number): boolean {
 		const [base, front] = getZoneParts(zone);
 		if (base === undefined || front === undefined) {
 			warn(`[HouseService] zone "${zone.Name}" needs a baseplate part + a part named "front" — skipped.`);
@@ -109,6 +118,28 @@ export class HouseService implements OnStart {
 				inst.CanCollide = false;
 			}
 		}
+
+		// Register this house as a home: spawn point just outside the front door, plus an
+		// entrance node at the door (for the M4 perception/crime layer).
+		const door = findDoorPart(clone);
+		const houseCenter = clone.GetBoundingBox()[0].Position;
+		const outward =
+			door !== undefined
+				? flattenDir(new Vector3(door.Position.X - houseCenter.X, 0, door.Position.Z - houseCenter.Z))
+				: desired;
+		const doorPos = door !== undefined ? door.Position : pos;
+		this.townService.registerNode({
+			name: `HomeNode_${homeIndex}`,
+			kind: NodeKind.Home,
+			position: new Vector3(doorPos.X + outward.X * 6, groundY + 3, doorPos.Z + outward.Z * 6),
+			spot: "interior",
+		});
+		this.townService.registerNode({
+			name: `HomeEntrance_${homeIndex}`,
+			kind: NodeKind.Home,
+			position: new Vector3(doorPos.X + outward.X * 2, groundY + 3, doorPos.Z + outward.Z * 2),
+			spot: "entrance",
+		});
 		return true;
 	}
 
@@ -143,6 +174,16 @@ function signedYaw(from: Vector3, to: Vector3): number {
 	const a = flattenDir(from);
 	const b = flattenDir(to);
 	return math.atan2(a.Cross(b).Y, a.Dot(b));
+}
+
+/** The Front/Door marker part inside a house (for orientation + entrance placement). */
+function findDoorPart(house: Model): BasePart | undefined {
+	for (const inst of house.GetDescendants()) {
+		if (!inst.IsA("BasePart")) continue;
+		const name = string.lower(inst.Name);
+		if (name.find("front")[0] !== undefined || name.find("door")[0] !== undefined) return inst;
+	}
+	return undefined;
 }
 
 /** The house's own front direction, from a `Front`/`Door` marker part relative to its centre. */

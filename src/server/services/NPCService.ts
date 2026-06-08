@@ -44,11 +44,19 @@ export class NPCService implements OnStart {
 		});
 	}
 
-	/** Expand POPULATION (shared) into one roster entry per NPC for the current house count. */
+	/** Expand POPULATION (shared) into one roster entry per NPC for the homes that exist. */
 	private buildRoster(): Array<RosterEntry> {
 		const roster = new Array<RosterEntry>();
-		for (const entry of POPULATION.unique) roster.push(entry);
-		for (let home = 1; home <= CONFIG.town.HOUSE_COUNT; home++) {
+		const homeCount = this.townService.getHomeCount();
+		if (homeCount === 0) {
+			warn("[NPCService] no homes registered (place HouseZones) — no NPCs spawned");
+			return roster;
+		}
+		// Wrap unique assignments into the available homes.
+		for (const entry of POPULATION.unique) {
+			roster.push({ role: entry.role, homeIndex: ((entry.homeIndex - 1) % homeCount) + 1 });
+		}
+		for (let home = 1; home <= homeCount; home++) {
 			for (const role of POPULATION.perHouse) roster.push({ role, homeIndex: home });
 		}
 		return roster;
